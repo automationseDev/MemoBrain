@@ -3,6 +3,7 @@ local.properties
 
 # Release-only local configuration
 release-secrets.properties
+signing-secrets.properties
 
 # Android Studio / Gradle generated
 .gradle/
