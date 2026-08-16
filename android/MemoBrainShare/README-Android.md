@@ -7,14 +7,14 @@ MemoBrain Share は、Android の共有メニューからテキスト・URL・�
 
 ## プライバシー設計
 
-- Dify API Base / API Key / AIチャットWeb URL は APK に含めない
+- Dify API Base / API Key / Dify Web App URL は APK に含めない
 - Dify接続情報は Android Keystore を利用して端末内で暗号化
 - 共有テキスト・添付ファイルはバックグラウンド送信待ちの間だけアプリ専用領域へ AES-GCM 暗号化して保存
 - 送信時のみ `cacheDir` に復号し、アップロード直後に削除
 - 送信成功または最終失敗時に暗号化キューを削除
 - ネットワークが戻らない場合も最大24時間で送信待ちデータを削除する Cleanup Worker を登録
 - Androidバックアップ / 端末移行バックアップを無効化
-- HTTP平文通信を禁止し、Dify API Base / AIチャットWeb URL は HTTPS のみ許可
+- HTTP平文通信を禁止し、Dify API Base / Dify Web App URL は HTTPS のみ許可
 - `FLAG_SECURE` により共有内容・API設定・チャット画面のスクリーンショット/タスクスナップショットを抑止
 - 通知本文にはメモ内容や Dify のレスポンス本文を表示しない
 - Difyエラー時もサーバーレスポンス本文を通知/ログへ出さない
@@ -23,11 +23,11 @@ MemoBrain Share は、Android の共有メニューからテキスト・URL・�
 
 ### 広告設計
 
-MemoBrain はネイティブ AdMob バナーを使用しません。広告を表示する場合は、AIチャット画面で読み込む開発者管理のHTTPS Webページ内に AdSense を配置します。
+MemoBrain はネイティブ AdMob バナーを使用しません。広告は開発者管理の案内用HTTPS Webページを表示する専用WebViewに配置し、利用者のDify公開Web Appは別のWebViewで直接表示します。
 
 Android側では `MobileAds.registerWebView()` のために Google Mobile Ads SDK を残しています。これは Google の WebView API for Ads 連携用で、APK に AdMob App ID / Banner Ad Unit ID を埋め込むためではありません。
 
-AdSenseのPublisher ID / Slot IDはAndroidビルド時に不要です。`web/memobrain-chat/config.js` をWebサーバー上だけで設定できます。このファイルはGit管理対象外です。
+AdSenseのPublisher ID / Slot IDはAndroidビルド時に不要です。`web/memobrain-ad/config.js` をWebサーバー上だけで設定できます。このファイルはGit管理対象外です。
 
 WebView API for Ads はネイティブアプリ側の同意状態をWeb広告へ自動伝搬しないため、Web広告の同意/CMPはWebページ側で処理してください。
 
@@ -55,7 +55,7 @@ DebugビルドにもネイティブAdMob IDは不要です。
 生成先:
 
 ```text
-MemoBrainShare\output\MemoBrain-v1.0.0-debug.apk
+MemoBrainShare\output\MemoBrain-v1.1.0-debug.apk
 ```
 
 ## 署名済み Release APK
@@ -90,7 +90,7 @@ MemoBrainShare\Build-MemoBrainRelease.cmd
 成功すると:
 
 ```text
-MemoBrainShare\output\MemoBrain-v1.0.0-release.apk
+MemoBrainShare\output\MemoBrain-v1.1.0-release.apk
 MemoBrainShare\output\SHA256SUMS.txt
 ```
 
@@ -109,14 +109,13 @@ Releaseビルドでは以下の場合にビルドを停止します。
 
 ## AIチャット / AdSense Webページ
 
-1. `web/memobrain-chat/` をHTTPSのWebサーバーへ配置します。
+1. `web/memobrain-ad/` を開発者管理のHTTPS Webサーバーへ配置します。
 2. `config.example.js` をサーバー上で `config.js` としてコピーします。
-3. `difyWebAppUrl` にDifyの公開Web App URLを設定します。
-4. レイアウト確認中は `showAdPlaceholder: true` にすると広告位置が見えます。
-5. AdSenseを利用するときだけ `adsenseClient` / `adsenseSlot` をサーバー上の `config.js` に設定します。
-6. MemoBrainの `AIチャット Web URL` には、このラッパーページのHTTPS URLを設定します。
+3. レイアウト確認中は `showAdPlaceholder: true` にすると広告位置が見えます。
+4. AdSenseを利用するときだけ `adsenseClient` / `adsenseSlot` をサーバー上の `config.js` に設定します。
+5. MemoBrainの `Dify Web App URL` には、利用者自身のDify公開Web App URLを直接設定します。
 
-Difyの公開Web App URLを直接指定することもできますが、その場合はラッパーページを通らないためMemoBrain側のAdSense領域はありません。
+広告ページとDifyは別WebViewです。広告ページの `config.js` にDify URLを設定せず、利用者のDify URLが広告ページへ送信されることもありません。
 
 ## 初回利用
 
@@ -124,7 +123,7 @@ Difyの公開Web App URLを直接指定することもできますが、その�
 2. `Dify接続設定（必須）`
 3. HTTPS の Dify API Base（例 `https://your-dify.example/v1`）を入力
 4. Dify App API Key を入力
-5. 必要に応じて AIチャット Web URL を入力
+5. 必要に応じて Dify Web App URL を入力
 6. Androidの共有メニューから MemoBrain を選択
 7. `MemoBrainに保存` を押す
 

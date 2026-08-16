@@ -6,7 +6,7 @@
 
 ## 1. アプリについて
 
-MemoBrain（以下「本アプリ」）は、Androidの共有機能を利用して、テキスト、URL、画像、動画、PDF、文書等を、利用者が設定した Dify 環境へ送信するクライアントアプリです。また、利用者が設定したHTTPSのWebページをアプリ内WebViewで表示し、Difyの公開Web Appを利用できるAIチャット画面を提供します。
+MemoBrain（以下「本アプリ」）は、Androidの共有機能を利用して、テキスト、URL、画像、動画、PDF、文書等を、利用者が設定した Dify 環境へ送信するクライアントアプリです。また、開発者管理の広告・案内ページと、利用者が設定したDify公開Web Appを、それぞれ分離したアプリ内WebViewで表示するAIチャット画面を提供します。
 
 **本アプリの利用には Dify 環境が必須です。本アプリ単体では保存機能を利用できません。**
 
@@ -18,7 +18,7 @@ MemoBrain（以下「本アプリ」）は、Androidの共有機能を利用し�
 - 利用者が共有した画像、動画、PDF、文書等
 - 利用者が設定した Dify API Base
 - 利用者が設定した Dify App API Key
-- 利用者が設定した AIチャット Web URL
+- 利用者が設定した Dify Web App URL
 
 本アプリは、連絡先、通話履歴、SMS、位置情報等へのアクセス権限を要求しません。DifyのWeb画面でファイル選択等を行う場合は、利用者の操作によりAndroidのシステムファイル選択画面が開くことがあります。
 
@@ -28,7 +28,7 @@ MemoBrain（以下「本アプリ」）は、Androidの共有機能を利用し�
 
 本アプリには、開発者が管理する Dify API URL や Dify API Key はあらかじめ組み込まれていません。利用者自身が Dify 接続先を設定します。
 
-Dify側に送信されたデータの保存期間、Knowledgeへの保存、ログ、バックアップ、利用するLLMプロバイダーやプラグインへの送信については、利用者が構築・設定した Dify 環境および関連サービスの設定・プライバシーポリシーに従います。
+Dify側に送信されたデータの保存期間、Knowledgeへの保存、ログ、バックアップ、利用するLLMプロバイダーやプラグインへの送信については、利用者が構築・設定した Dify 環境および関連サービスの設定・プライバシーポリシーに従います。Dify DSL v0.3.0のナレッジ補完機能を使用すると、Knowledgeに十分な情報がない場合に検索語句がDuckDuckGo Searchプラグインへ送信されます。取得した検索結果と参照URLは利用者が設定したLLMで記事化され、その記事が利用者のKnowledgeへ登録されます。
 
 ## 4. 端末内の一時保存
 
@@ -48,7 +48,7 @@ Dify側に送信されたデータの保存期間、Knowledgeへの保存、ロ�
 
 ## 5. Dify接続情報
 
-Dify API Base、Dify App API Key、AIチャット Web URL は、Android Keystoreを利用して暗号化し端末内に保存します。
+Dify API Base、Dify App API Key、Dify Web App URL は、Android Keystoreを利用して暗号化し端末内に保存します。
 
 これらの値は本アプリの配布APK/AABには含まれません。利用者はアプリ内の接続設定から削除できます。
 
@@ -56,7 +56,7 @@ Dify API Base、Dify App API Key、AIチャット Web URL は、Android Keystore
 
 本アプリはネイティブのAdMobバナー広告を表示しません。また、AdMob App IDやBanner Ad Unit IDをAPKへ組み込む構成ではありません。
 
-AIチャット画面では、利用者が設定したHTTPS WebページをAndroid WebViewで表示します。そのWebページの管理者がGoogle AdSense等のWeb広告を設置している場合、WebView内に広告が表示されることがあります。
+AIチャット画面では、開発者管理の広告・案内用HTTPSページと、利用者が設定したDify公開Web Appを別々のAndroid WebViewで表示します。広告ページにはGoogle AdSense等のWeb広告が表示される場合があります。利用者のDify URLは広告ページへ送信されません。
 
 本アプリはGoogleの WebView API for Ads を利用するため Google Mobile Ads SDK を含み、対象WebViewを `MobileAds.registerWebView()` で登録します。本アプリでは Android Advertising ID (`AD_ID`) 権限をマニフェストから削除しています。ただし、WebView内の広告配信や不正防止等に伴い、Googleや広告関連サービスがIPアドレス、デバイス関連情報、広告とのインタラクション等を処理する場合があります。
 

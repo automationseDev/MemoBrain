@@ -1,30 +1,35 @@
-# MemoBrain Dify workflow
+# MemoBrain Dify package
 
-MemoBrain Android アプリの保存先として利用する Dify DSL です。
+## 推奨DSL
 
-## 配布ファイル
+- `MemoBrain_DifyOnly_v0.3.0.yml`: Knowledge優先検索、Web検索フォールバック、記事生成、Knowledge自動登録を備えたAdvanced Chatflow
+- `MemoBrain_DifyOnly_v0.2.2.yml`: Web検索を行わない従来版
 
-`MemoBrain-v0.2.2-DifyPatch.zip` に次を収録しています。
+AndroidアプリとDify DSLは別バージョンで管理します。Android v1.1.0に更新しても、Dify DSLを必ず変更する必要はありません。
 
-- `MemoBrain_DifyOnly_v0.2.2.yml` — Dify にインポートする DSL
-- `MemoBrain-v0.2.2-README.txt` — 補足説明
+## v0.3.0の動作
 
-ZIPを展開し、Dify Studio から `MemoBrain_DifyOnly_v0.2.2.yml` をインポートしてください。
+1. 利用者の質問で既存Knowledgeを検索
+2. 検索結果が存在し、最高関連度スコアが0.35以上ならKnowledgeだけで回答
+3. 不足時はDuckDuckGo SearchでWeb検索（最大5件）
+4. 参照URLを残した日本語記事へ整理
+5. 既存のMemoBrain Knowledgeへ自動登録
+6. 登録した内容を回答
 
-## インポート後に設定する値
+共有メニューからの通常保存、一覧、詳細、更新、削除の既存機能は維持しています。
 
-DSLには実運用の API Key は含めていません。Dify側で次を設定してください。
+## インポート前の準備
 
-- `DIFY_API_BASE`: 自分の Dify API Base URL
-- `KNOWLEDGE_API_KEY`: 自分の Dify Knowledge Service API Key
-- `DATASET_NAME`: 保存先 Knowledge 名（例: `MemoBrain`）
+Dify Marketplaceから `DuckDuckGo Search`（`langgenius/duckduckgo`）プラグインをインストールしてください。API Keyは不要です。セルフホストDifyから外部Webへ到達できる必要があります。
 
-Android側には別途、Dify App API Base URL と App API Key を設定します。
+インポート後に次の環境変数を設定します。
 
-## YouTube
+- `DIFY_API_BASE`: 自分のDify API Base（例: `https://your-dify-api.example.com/v1`）
+- `KNOWLEDGE_API_KEY`: Dify Knowledge Service API Key
+- `DATASET_NAME`: MemoBrainが利用するKnowledge名
 
-YouTube字幕取得ノードは `langgenius/transcript` の Transcript ツールを利用します。Difyから要求された場合はプラグインを導入してください。
+公開DSLには実環境URLやAPI Keyを含めていません。
 
-## セキュリティ
+## データ送信上の注意
 
-API Key、実運用URL、認証情報をこのリポジトリへコミットしないでください。
+ナレッジ補完を使うと、質問の検索語句はDuckDuckGo Searchプラグインへ送信されます。検索結果は、Difyに設定したLLMへ渡して記事化し、利用者自身のKnowledgeへ保存します。外部検索を避けたい場合はv0.2.2を使用するか、v0.3.0のWeb検索経路を無効化してください。
