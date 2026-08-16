@@ -1,6 +1,6 @@
 # Galaxy Store 公開方針
 
-Galaxy Store には GitHub Releases と同一系統の正式署名 APK を公開します。
+Galaxy Store には GitHub Releases と**同一の署名済み Release APK**を公開します。
 
 ## 維持するもの
 
@@ -9,7 +9,11 @@ Galaxy Store には GitHub Releases と同一系統の正式署名 APK を公開
 - 同一 versionCode / versionName の APK
 - Release ビルド時に組み込んだ開発者管理の AdMob ID
 
-署名鍵 (`.jks`) とパスワードはリポジトリへコミットしません。
+正式 APK は `android/MemoBrainShare/Build-MemoBrainRelease.cmd` で作成し、生成された `output/MemoBrain-v1.0.0-release.apk` を GitHub Releases と Galaxy Store の両方へ使用します。
+
+署名鍵 (`.jks`) とパスワード、`signing-secrets.properties`、本番 AdMob ID を含む `release-secrets.properties` はリポジトリへコミットしません。
+
+詳しい作成手順は [RELEASE_SIGNING.md](RELEASE_SIGNING.md) を参照してください。
 
 ## ストア説明で必ず明示する事項
 
