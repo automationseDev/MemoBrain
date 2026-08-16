@@ -29,7 +29,7 @@ MemoBrain/
 ## クイックスタート
 
 1. Dify を用意します。
-2. `dify/MemoBrain_DifyOnly_v0.3.0.yml` を Dify にインポートします。ナレッジ不足時のWeb検索を使う場合は、Dify Marketplaceから DuckDuckGo Search プラグインを追加します。
+2. `dify/MemoBrain_DifyOnly_v0.3.1.yml` を Dify にインポートします。ナレッジ不足時のWeb検索を使う場合は、Dify Marketplaceから DuckDuckGo Search プラグインを追加します。
 3. Dify 側の環境変数 `DIFY_API_BASE`、`KNOWLEDGE_API_KEY`、`DATASET_NAME` を設定します。
 4. MemoBrain の APK をインストールします。
 5. MemoBrain の「Dify接続設定」に Dify App API Base URL と App API Key を設定します。
@@ -40,7 +40,7 @@ MemoBrain/
 
 ## ナレッジ補完エージェント
 
-Dify DSL v0.3.0では、質問に対して既存Knowledgeを先に検索します。検索結果がないか関連度が低い場合、DuckDuckGo SearchでWebを検索し、参照URL付きの日本語記事へ整理して同じKnowledgeへ登録したうえで回答します。検索語句はDuckDuckGoプラグインへ、検索結果と生成対象は設定したLLMへ送信されます。この外部検索はAIチャットから質問した場合にだけ動作し、Android共有による通常保存の経路は従来どおりです。
+Dify DSL v0.3.1では、質問に対して既存Knowledgeを先に検索します。検索結果がないか関連度が低い場合、DuckDuckGo SearchでWebを検索し、参照URL付きの日本語記事へ整理して同じKnowledgeへ登録したうえで回答します。検索語句はDuckDuckGoプラグインへ、検索結果と生成対象は設定したLLMへ送信されます。この外部検索はAIチャットから質問した場合にだけ動作し、Android共有による通常保存の経路は従来どおりです。
 
 ## 必要環境
 

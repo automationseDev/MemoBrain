@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Dify DSL v0.3.1でDuckDuckGo Queryの空入力とKnowledge該当なし時のWeb検索未実行を修正
 - Android app version 1.1.0 / versionCode 8（同一applicationId・同一署名でv1.0.0から更新可能）
 - Dify DSL v0.3.0にKnowledge優先・DuckDuckGo Web検索フォールバック・記事化・Knowledge自動登録を追加
 - 完全な空入力でKnowledgeへ投稿されない入力チェックを追加
