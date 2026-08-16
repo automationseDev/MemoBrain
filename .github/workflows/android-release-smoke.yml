@@ -1,0 +1,66 @@
+name: Android Release Smoke Build
+
+on:
+  push:
+    paths:
+      - 'android/**'
+      - '.github/workflows/android-release-smoke.yml'
+  pull_request:
+    paths:
+      - 'android/**'
+      - '.github/workflows/android-release-smoke.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  release-smoke:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: android/MemoBrainShare
+
+    env:
+      MEMOBRAIN_ADMOB_APP_ID: ca-app-pub-1111111111111111~1111111111
+      MEMOBRAIN_ADMOB_BANNER_ID: ca-app-pub-1111111111111111/1111111111
+      MEMOBRAIN_KEYSTORE_PATH: ${{ runner.temp }}/memobrain-ci-release.jks
+      MEMOBRAIN_KEYSTORE_PASSWORD: memobrain-ci-password
+      MEMOBRAIN_KEY_ALIAS: memobrain-ci
+      MEMOBRAIN_KEY_PASSWORD: memobrain-ci-password
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Generate ephemeral CI signing key
+        run: |
+          keytool -genkeypair \
+            -keystore "$MEMOBRAIN_KEYSTORE_PATH" \
+            -storepass "$MEMOBRAIN_KEYSTORE_PASSWORD" \
+            -keypass "$MEMOBRAIN_KEY_PASSWORD" \
+            -alias "$MEMOBRAIN_KEY_ALIAS" \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 1 \
+            -dname "CN=MemoBrain CI, OU=CI, O=MemoBrain, L=CI, ST=CI, C=JP"
+
+      - name: Build signed release APK
+        run: ./gradlew --no-daemon :app:assembleRelease --stacktrace
+
+      - name: Verify APK signature
+        run: |
+          APK="app/build/outputs/apk/release/app-release.apk"
+          test -f "$APK"
+          APKSIGNER=$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)
+          test -n "$APKSIGNER"
+          "$APKSIGNER" verify --verbose --print-certs "$APK"
+
+      - name: Confirm release artifact exists
+        run: ls -lh app/build/outputs/apk/release/app-release.apk
