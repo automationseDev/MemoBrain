@@ -27,7 +27,7 @@ MemoBrain Share は、Android の共有メニューからテキスト・URL・�
 端末内の一時データを残しにくくする設計ですが、MemoBrain の目的上、ユーザーが保存した内容は **設定した Dify に送信されます**。
 Dify の Knowledge、利用するLLM/プラグイン、ログ、バックアップ等にどの程度データが残るかは、利用者自身の Dify 構成と各サービスのポリシーに依存します。
 
-また、AdMob SDK 自体によるデータ処理はゼロにはできません。Google Play の Data safety 申告時は、使用中の Google Mobile Ads SDK / UMP SDK の最新公式開示を必ず確認してください。
+また、AdMob SDK 自体によるデータ処理はゼロにはできません。ストア申告時は、使用中の Google Mobile Ads SDK / UMP SDK の最新公式開示を確認してください。
 
 ## Debug APK のビルド
 
@@ -51,39 +51,75 @@ Debugビルドは必ずGoogle公式テスト広告IDを使用します。
 MemoBrainShare\output\MemoBrain-v1.0.0-debug.apk
 ```
 
-## 正式版 AdMob ID
+## 署名済み Release APK
 
-正式版にはユーザーが広告IDを変更する画面はありません。
+正式配布版では、AdMob ID と署名情報をローカルファイルから読み込みます。利用者が広告IDや署名情報を変更する画面はありません。
 
-`release-secrets.properties.example` をコピーして、ローカルだけに次のファイルを作成します。
+### 1. AdMob
 
-```text
-release-secrets.properties
-```
-
-中身:
+`release-secrets.properties.example` を `release-secrets.properties` にコピーします。
 
 ```properties
 MEMOBRAIN_ADMOB_APP_ID=ca-app-pub-xxxxxxxxxxxxxxxx~xxxxxxxxxx
 MEMOBRAIN_ADMOB_BANNER_ID=ca-app-pub-xxxxxxxxxxxxxxxx/xxxxxxxxxx
 ```
 
-`release-secrets.properties` は `.gitignore` 対象です。
+### 2. 署名情報
+
+`signing-secrets.properties.example` を `signing-secrets.properties` にコピーします。
+
+```properties
+MEMOBRAIN_KEYSTORE_PATH=C:/Users/yourname/Documents/AndroidKeys/MemoBrain-upload.jks
+MEMOBRAIN_KEYSTORE_PASSWORD=your-keystore-password
+MEMOBRAIN_KEY_ALIAS=memobrain-upload
+MEMOBRAIN_KEY_PASSWORD=your-key-password
+```
+
+Windowsではkeystore pathを `/` 区切りにすると `.properties` のエスケープ問題を避けられます。
+
+`release-secrets.properties`、`signing-secrets.properties`、`.jks`、`.keystore` はGit管理対象外です。
+
+### 3. ビルド
+
+```text
+MemoBrainShare\Build-MemoBrainRelease.cmd
+```
+
+または:
+
+```powershell
+.\Build-MemoBrainRelease.ps1
+```
+
+成功すると:
+
+```text
+MemoBrainShare\output\MemoBrain-v1.0.0-release.apk
+MemoBrainShare\output\SHA256SUMS.txt
+```
+
+を生成します。Android SDK の `apksigner.bat` を検出できた場合は署名検証も自動実行します。
+
+GitHub Releases と Samsung Galaxy Store には、この同じ Release APK を使用します。更新時も同じ keystore / alias を使い、`versionCode` を必ず増やしてください。
+
+詳しくは `docs/RELEASE_SIGNING.md` を参照してください。
+
+## Release ビルドの安全チェック
 
 Releaseビルドでは以下の場合にビルドを停止します。
 
-- App IDが未設定
+- AdMob App IDが未設定
 - Banner Ad Unit IDが未設定
-- Google公式テストIDが設定されている
-- ID形式が不正
+- Google公式テスト広告IDが設定されている
+- AdMob ID形式が不正
+- keystore path / password / alias / key password が不足している
+- keystoreファイルが存在しない
 
-これにより、正式版がテスト広告や他人が入力した広告IDで配布されることを防ぎます。
+これにより、テスト広告や未署名APKを正式版として誤配布しにくくしています。
 
-## Google Play 用ビルド
+## AABを作る場合
 
-新規Google Playアプリは Android App Bundle (AAB) で公開します。
-Android Studioから `MemoBrainShare` を開き、正式な AdMob ID をローカル設定後、
-**Build > Generate Signed App Bundle / APK > Android App Bundle** で署名済みAABを作成してください。
+Android Studioの **Build > Generate Signed App Bundle / APK** を使う方法に加え、同じ `signing-secrets.properties` を設定済みならGradleの `bundleRelease` でも同じ署名構成を利用できます。
 
 署名鍵、keystore、パスワードはこのプロジェクト/ZIPへ保存しないでください。
 
