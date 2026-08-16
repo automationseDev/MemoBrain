@@ -1,0 +1,33 @@
+name: Extract Dify DSL
+
+on:
+  push:
+    paths:
+      - 'dify/MemoBrain-v0.2.2-DifyPatch.zip'
+      - '.github/workflows/extract-dify.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  extract:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Extract public Dify package
+        run: unzip -o dify/MemoBrain-v0.2.2-DifyPatch.zip -d dify
+
+      - name: Commit extracted DSL if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add dify/MemoBrain_DifyOnly_v0.2.2.yml dify/MemoBrain-v0.2.2-README.txt
+          if git diff --cached --quiet; then
+            echo "No extracted Dify changes."
+          else
+            git commit -m "chore: publish extracted Dify DSL"
+            git push
+          fi
