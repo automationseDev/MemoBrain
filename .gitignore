@@ -1,0 +1,30 @@
+# Android / Gradle
+.gradle/
+**/build/
+local.properties
+.idea/*
+!.idea/gradle.xml
+
+# Release secrets / signing
+release-secrets.properties
+*.jks
+*.keystore
+*.pem
+*.p12
+*.pfx
+
+# APK / AAB and generated outputs
+*.apk
+*.aab
+output/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+*.tmp
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
