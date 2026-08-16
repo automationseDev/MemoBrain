@@ -1,0 +1,5179 @@
+app:
+  description: 'MemoBrain v0.3.3: Gemini 3.6 Flashから3.5 Flash、2.5 Flashへ自動切替。正常系をsourceハンドルへ接続し、成功後も既存フローを継続。Knowledge不足時のWeb検索・記事生成・Knowledge自動登録に対応。'
+  icon: 🧠
+  icon_background: '#E4FBCC'
+  icon_type: emoji
+  mode: advanced-chat
+  name: MemoBrain - Agent v0.3.3
+  use_icon_as_answer_icon: false
+dependencies: []
+kind: app
+version: 0.6.0
+workflow:
+  conversation_variables:
+  - description: MemoBrain Knowledge ID cache
+    id: 8f372b43-f001-42da-8f30-1ab3de83f001
+    name: dataset_id
+    selector:
+    - conversation
+    - dataset_id
+    value: ''
+    value_type: string
+  environment_variables:
+  - description: Dify API base URL
+    id: 8f372b43-f002-42da-8f30-1ab3de83f002
+    name: DIFY_API_BASE
+    selector:
+    - env
+    - DIFY_API_BASE
+    value: https://your-dify-api.example.com/v1
+    value_type: string
+  - description: Knowledge Service API key (set after import)
+    id: 8f372b43-f003-42da-8f30-1ab3de83f003
+    name: KNOWLEDGE_API_KEY
+    selector:
+    - env
+    - KNOWLEDGE_API_KEY
+    value: ''
+    value_type: string
+  - description: Knowledge base name
+    id: 8f372b43-f004-42da-8f30-1ab3de83f004
+    name: DATASET_NAME
+    selector:
+    - env
+    - DATASET_NAME
+    value: MemoBrain
+    value_type: string
+  features:
+    file_upload:
+      allowed_file_extensions:
+      - .JPG
+      - .JPEG
+      - .PNG
+      - .GIF
+      - .WEBP
+      - .SVG
+      - .PDF
+      - .TXT
+      - .MD
+      - .DOC
+      - .DOCX
+      - .XLS
+      - .XLSX
+      - .PPT
+      - .PPTX
+      - .CSV
+      - .MP4
+      - .MOV
+      - .WEBM
+      - .M4V
+      allowed_file_types:
+      - image
+      - document
+      - video
+      - audio
+      allowed_file_upload_methods:
+      - local_file
+      - remote_url
+      enabled: true
+      fileUploadConfig:
+        attachment_image_file_size_limit: 2
+        audio_file_size_limit: 50
+        batch_count_limit: 5
+        file_size_limit: 15
+        file_upload_limit: 20
+        image_file_batch_limit: 10
+        image_file_size_limit: 10
+        single_chunk_attachment_limit: 10
+        video_file_size_limit: 100
+        workflow_file_upload_limit: 10
+      image:
+        enabled: true
+        number_limits: 10
+        transfer_methods:
+        - local_file
+        - remote_url
+      number_limits: 10
+    opening_statement: '🧠 **MemoBrain v0.3 Agent**
+
+
+      文章はそのまま入力できます。Androidの共有先に MemoBrain Share を選ぶと、スクショ・写真・PDF・YouTube・Webページ・動画フレームを自動解析して保存します。
+
+
+      例：
+
+      - `来週NASのバックアップ設定を確認する`
+
+      - `Difyについて前に何をメモした？`
+
+      - `最近のメモを見せて`'
+    retriever_resource:
+      enabled: true
+    sensitive_word_avoidance:
+      enabled: false
+    speech_to_text:
+      enabled: false
+    suggested_questions:
+    - 最近のメモを見せて
+    - 使い方を教えて
+    suggested_questions_after_answer:
+      enabled: false
+    text_to_speech:
+      enabled: false
+      language: ''
+      voice: ''
+  graph:
+    edges:
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: start
+        targetType: if-else
+      id: start-source-key_check-target
+      source: start
+      sourceHandle: source
+      target: key_check
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: if-else
+        targetType: answer
+      id: key_check-false-key_error-target
+      source: key_check
+      sourceHandle: 'false'
+      target: key_error
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: code
+        targetType: if-else
+      id: intent_parse-source-cache_check-target
+      source: intent_parse
+      sourceHandle: source
+      target: cache_check
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: if-else
+        targetType: if-else
+      id: cache_check-cached-action_router-target
+      source: cache_check
+      sourceHandle: cached
+      target: action_router
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: if-else
+        targetType: http-request
+      id: cache_check-false-kb_list_http-target
+      source: cache_check
+      sourceHandle: 'false'
+      target: kb_list_http
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: http-request
+        targetType: code
+      id: kb_list_http-source-kb_lookup-target
+      source: kb_list_http
+      sourceHandle: source
+      target: kb_lookup
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: code
+        targetType: if-else
+      id: kb_lookup-source-kb_exists-target
+      source: kb_lookup
+      sourceHandle: source
+      target: kb_exists
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: if-else
+        targetType: assigner
+      id: kb_exists-found-assign_existing-target
+      source: kb_exists
+      sourceHandle: found
+      target: assign_existing
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: if-else
+        targetType: http-request
+      id: kb_exists-false-kb_create_http-target
+      source: kb_exists
+      sourceHandle: 'false'
+      target: kb_create_http
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: assigner
+        targetType: if-else
+      id: assign_existing-source-action_router-target
+      source: assign_existing
+      sourceHandle: source
+      target: action_router
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: http-request
+        targetType: code
+      id: kb_create_http-source-kb_create_parse-target
+      source: kb_create_http
+      sourceHandle: source
+      target: kb_create_parse
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: code
+        targetType: assigner
+      id: kb_create_parse-source-assign_created-target
+      source: kb_create_parse
+      sourceHandle: source
+      target: assign_created
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: assigner
+        targetType: if-else
+      id: assign_created-source-action_router-target
+      source: assign_created
+      sourceHandle: source
+      target: action_router
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: if-else
+        targetType: code
+      id: action_router-add-add_build-target
+      source: action_router
+      sourceHandle: add
+      target: add_build
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: code
+        targetType: http-request
+      id: add_build-source-add_http-target
+      source: add_build
+      sourceHandle: source
+      target: add_http
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: http-request
+        targetType: answer
+      id: add_http-source-add_answer-target
+      source: add_http
+      sourceHandle: source
+      target: add_answer
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: if-else
+        targetType: code
+      id: action_router-search-search_build-target
+      source: action_router
+      sourceHandle: search
+      target: search_build
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: code
+        targetType: http-request
+      id: search_build-source-search_http-target
+      source: search_build
+      sourceHandle: source
+      target: search_http
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: http-request
+        targetType: code
+      id: search_http-source-search_gate-target
+      source: search_http
+      sourceHandle: source
+      target: search_gate
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: code
+        targetType: if-else
+      id: search_gate-source-search_route-target
+      source: search_gate
+      sourceHandle: source
+      target: search_route
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: if-else
+        targetType: llm
+      id: search_route-knowledge-search_llm-target
+      source: search_route
+      sourceHandle: knowledge
+      target: search_llm
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: if-else
+        targetType: tool
+      id: search_route-false-web_query_build-target
+      source: search_route
+      sourceHandle: 'false'
+      target: web_query_build
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: code
+        targetType: if-else
+      id: search_answer_gate-source-search_answer_route-target
+      source: search_answer_gate
+      sourceHandle: source
+      target: search_answer_route
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: if-else
+        targetType: answer
+      id: search_answer_route-knowledge-search_answer-target
+      source: search_answer_route
+      sourceHandle: knowledge
+      target: search_answer
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: if-else
+        targetType: code
+      id: search_answer_route-false-web_query_build-target
+      source: search_answer_route
+      sourceHandle: 'false'
+      target: web_query_build
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: code
+        targetType: tool
+      id: web_query_build-source-web_search-target
+      source: web_query_build
+      sourceHandle: source
+      target: web_search
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: tool
+        targetType: code
+      id: web_search-source-web_check-target
+      source: web_search
+      sourceHandle: source
+      target: web_check
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: code
+        targetType: if-else
+      id: web_check-source-web_route-target
+      source: web_check
+      sourceHandle: source
+      target: web_route
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: if-else
+        targetType: llm
+      id: web_route-results-web_article_llm-target
+      source: web_route
+      sourceHandle: results
+      target: web_article_llm
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: if-else
+        targetType: answer
+      id: web_route-false-web_error-target
+      source: web_route
+      sourceHandle: 'false'
+      target: web_error
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: code
+        targetType: http-request
+      id: web_build-source-web_save_http-target
+      source: web_build
+      sourceHandle: source
+      target: web_save_http
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: http-request
+        targetType: answer
+      id: web_save_http-source-web_answer-target
+      source: web_save_http
+      sourceHandle: source
+      target: web_answer
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: if-else
+        targetType: http-request
+      id: action_router-list-list_http-target
+      source: action_router
+      sourceHandle: list
+      target: list_http
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: http-request
+        targetType: code
+      id: list_http-source-list_format-target
+      source: list_http
+      sourceHandle: source
+      target: list_format
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: code
+        targetType: answer
+      id: list_format-source-list_answer-target
+      source: list_format
+      sourceHandle: source
+      target: list_answer
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: if-else
+        targetType: code
+      id: action_router-delete-manage_build-target
+      source: action_router
+      sourceHandle: delete
+      target: manage_build
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: if-else
+        targetType: code
+      id: action_router-complete-manage_build-target
+      source: action_router
+      sourceHandle: complete
+      target: manage_build
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: if-else
+        targetType: code
+      id: action_router-update-manage_build-target
+      source: action_router
+      sourceHandle: update
+      target: manage_build
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: if-else
+        targetType: code
+      id: action_router-favorite-manage_build-target
+      source: action_router
+      sourceHandle: favorite
+      target: manage_build
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: code
+        targetType: http-request
+      id: manage_build-source-manage_http-target
+      source: manage_build
+      sourceHandle: source
+      target: manage_http
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: http-request
+        targetType: code
+      id: manage_http-source-target_parse-target
+      source: manage_http
+      sourceHandle: source
+      target: target_parse
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: code
+        targetType: if-else
+      id: target_parse-source-target_found-target
+      source: target_parse
+      sourceHandle: source
+      target: target_found
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: if-else
+        targetType: if-else
+      id: target_found-found-delete_or_update-target
+      source: target_found
+      sourceHandle: found
+      target: delete_or_update
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: if-else
+        targetType: answer
+      id: target_found-false-not_found-target
+      source: target_found
+      sourceHandle: 'false'
+      target: not_found
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: if-else
+        targetType: http-request
+      id: delete_or_update-delete-delete_http-target
+      source: delete_or_update
+      sourceHandle: delete
+      target: delete_http
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: if-else
+        targetType: code
+      id: delete_or_update-false-update_build-target
+      source: delete_or_update
+      sourceHandle: 'false'
+      target: update_build
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: http-request
+        targetType: answer
+      id: delete_http-source-delete_answer-target
+      source: delete_http
+      sourceHandle: source
+      target: delete_answer
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: code
+        targetType: http-request
+      id: update_build-source-update_http-target
+      source: update_build
+      sourceHandle: source
+      target: update_http
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: http-request
+        targetType: answer
+      id: update_http-source-update_answer-target
+      source: update_http
+      sourceHandle: source
+      target: update_answer
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: if-else
+        targetType: answer
+      id: action_router-false-help_answer-target
+      source: action_router
+      sourceHandle: 'false'
+      target: help_answer
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: if-else
+        targetType: if-else
+      id: key_check-has_key-source_router-target
+      source: key_check
+      sourceHandle: has_key
+      target: source_router
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: if-else
+        targetType: llm
+      id: source_router-false-intent_llm-target
+      source: source_router
+      sourceHandle: 'false'
+      target: intent_llm
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: if-else
+        targetType: llm
+      id: source_router-image-image_llm-target
+      source: source_router
+      sourceHandle: image
+      target: image_llm
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: if-else
+        targetType: llm
+      id: source_router-video-video_llm-target
+      source: source_router
+      sourceHandle: video
+      target: video_llm
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: if-else
+        targetType: document-extractor
+      id: source_router-document-doc_extract-target
+      source: source_router
+      sourceHandle: document
+      target: doc_extract
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: if-else
+        targetType: code
+      id: source_router-url-url_extract-target
+      source: source_router
+      sourceHandle: url
+      target: url_extract
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: code
+        targetType: http-request
+      id: url_extract-source-url_http-target
+      source: url_extract
+      sourceHandle: source
+      target: url_http
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: http-request
+        targetType: code
+      id: url_http-source-url_clean-target
+      source: url_http
+      sourceHandle: source
+      target: url_clean
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: code
+        targetType: llm
+      id: url_clean-source-url_llm-target
+      source: url_clean
+      sourceHandle: source
+      target: url_llm
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: if-else
+        targetType: code
+      id: source_router-youtube-yt_extract-target
+      source: source_router
+      sourceHandle: youtube
+      target: yt_extract
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: variable-aggregator
+        targetType: code
+      id: analysis_agg-source-intent_parse-target
+      source: analysis_agg
+      sourceHandle: source
+      target: intent_parse
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: code
+        targetType: tool
+      id: yt_extract-source-yt_transcript-target
+      source: yt_extract
+      sourceHandle: source
+      target: yt_transcript
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: tool
+        targetType: code
+      id: yt_transcript-source-yt_limit-target
+      source: yt_transcript
+      sourceHandle: source
+      target: yt_limit
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: code
+        targetType: llm
+      id: yt_limit-source-yt_llm-target
+      source: yt_limit
+      sourceHandle: source
+      target: yt_llm
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: document-extractor
+        targetType: code
+      id: doc_extract-source-doc_limit-target
+      source: doc_extract
+      sourceHandle: source
+      target: doc_limit
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: code
+        targetType: llm
+      id: doc_limit-source-doc_llm-target
+      source: doc_limit
+      sourceHandle: source
+      target: doc_llm
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: llm
+        targetType: variable-aggregator
+      id: intent_llm-source-intent_llm_result-target
+      source: intent_llm
+      sourceHandle: source
+      target: intent_llm_result
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: llm
+        targetType: llm
+      id: intent_llm-fail-branch-intent_llm_35-target
+      source: intent_llm
+      sourceHandle: fail-branch
+      target: intent_llm_35
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: llm
+        targetType: variable-aggregator
+      id: intent_llm_35-source-intent_llm_result-target
+      source: intent_llm_35
+      sourceHandle: source
+      target: intent_llm_result
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: llm
+        targetType: llm
+      id: intent_llm_35-fail-branch-intent_llm_25-target
+      source: intent_llm_35
+      sourceHandle: fail-branch
+      target: intent_llm_25
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: llm
+        targetType: variable-aggregator
+      id: intent_llm_25-source-intent_llm_result-target
+      source: intent_llm_25
+      sourceHandle: source
+      target: intent_llm_result
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: variable-aggregator
+        targetType: variable-aggregator
+      id: intent_llm_result-source-analysis_agg-target
+      source: intent_llm_result
+      sourceHandle: source
+      target: analysis_agg
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: llm
+        targetType: variable-aggregator
+      id: web_article_llm-source-web_article_llm_result-target
+      source: web_article_llm
+      sourceHandle: source
+      target: web_article_llm_result
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: llm
+        targetType: llm
+      id: web_article_llm-fail-branch-web_article_llm_35-target
+      source: web_article_llm
+      sourceHandle: fail-branch
+      target: web_article_llm_35
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: llm
+        targetType: variable-aggregator
+      id: web_article_llm_35-source-web_article_llm_result-target
+      source: web_article_llm_35
+      sourceHandle: source
+      target: web_article_llm_result
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: llm
+        targetType: llm
+      id: web_article_llm_35-fail-branch-web_article_llm_25-target
+      source: web_article_llm_35
+      sourceHandle: fail-branch
+      target: web_article_llm_25
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: llm
+        targetType: variable-aggregator
+      id: web_article_llm_25-source-web_article_llm_result-target
+      source: web_article_llm_25
+      sourceHandle: source
+      target: web_article_llm_result
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: variable-aggregator
+        targetType: code
+      id: web_article_llm_result-source-web_build-target
+      source: web_article_llm_result
+      sourceHandle: source
+      target: web_build
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: llm
+        targetType: variable-aggregator
+      id: search_llm-source-search_llm_result-target
+      source: search_llm
+      sourceHandle: source
+      target: search_llm_result
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: llm
+        targetType: llm
+      id: search_llm-fail-branch-search_llm_35-target
+      source: search_llm
+      sourceHandle: fail-branch
+      target: search_llm_35
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: llm
+        targetType: variable-aggregator
+      id: search_llm_35-source-search_llm_result-target
+      source: search_llm_35
+      sourceHandle: source
+      target: search_llm_result
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: llm
+        targetType: llm
+      id: search_llm_35-fail-branch-search_llm_25-target
+      source: search_llm_35
+      sourceHandle: fail-branch
+      target: search_llm_25
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: llm
+        targetType: variable-aggregator
+      id: search_llm_25-source-search_llm_result-target
+      source: search_llm_25
+      sourceHandle: source
+      target: search_llm_result
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: variable-aggregator
+        targetType: code
+      id: search_llm_result-source-search_answer_gate-target
+      source: search_llm_result
+      sourceHandle: source
+      target: search_answer_gate
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: llm
+        targetType: variable-aggregator
+      id: image_llm-source-image_llm_result-target
+      source: image_llm
+      sourceHandle: source
+      target: image_llm_result
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: llm
+        targetType: llm
+      id: image_llm-fail-branch-image_llm_35-target
+      source: image_llm
+      sourceHandle: fail-branch
+      target: image_llm_35
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: llm
+        targetType: variable-aggregator
+      id: image_llm_35-source-image_llm_result-target
+      source: image_llm_35
+      sourceHandle: source
+      target: image_llm_result
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: llm
+        targetType: llm
+      id: image_llm_35-fail-branch-image_llm_25-target
+      source: image_llm_35
+      sourceHandle: fail-branch
+      target: image_llm_25
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: llm
+        targetType: variable-aggregator
+      id: image_llm_25-source-image_llm_result-target
+      source: image_llm_25
+      sourceHandle: source
+      target: image_llm_result
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: variable-aggregator
+        targetType: variable-aggregator
+      id: image_llm_result-source-analysis_agg-target
+      source: image_llm_result
+      sourceHandle: source
+      target: analysis_agg
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: llm
+        targetType: variable-aggregator
+      id: video_llm-source-video_llm_result-target
+      source: video_llm
+      sourceHandle: source
+      target: video_llm_result
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: llm
+        targetType: llm
+      id: video_llm-fail-branch-video_llm_35-target
+      source: video_llm
+      sourceHandle: fail-branch
+      target: video_llm_35
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: llm
+        targetType: variable-aggregator
+      id: video_llm_35-source-video_llm_result-target
+      source: video_llm_35
+      sourceHandle: source
+      target: video_llm_result
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: llm
+        targetType: llm
+      id: video_llm_35-fail-branch-video_llm_25-target
+      source: video_llm_35
+      sourceHandle: fail-branch
+      target: video_llm_25
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: llm
+        targetType: variable-aggregator
+      id: video_llm_25-source-video_llm_result-target
+      source: video_llm_25
+      sourceHandle: source
+      target: video_llm_result
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: variable-aggregator
+        targetType: variable-aggregator
+      id: video_llm_result-source-analysis_agg-target
+      source: video_llm_result
+      sourceHandle: source
+      target: analysis_agg
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: llm
+        targetType: variable-aggregator
+      id: doc_llm-source-doc_llm_result-target
+      source: doc_llm
+      sourceHandle: source
+      target: doc_llm_result
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: llm
+        targetType: llm
+      id: doc_llm-fail-branch-doc_llm_35-target
+      source: doc_llm
+      sourceHandle: fail-branch
+      target: doc_llm_35
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: llm
+        targetType: variable-aggregator
+      id: doc_llm_35-source-doc_llm_result-target
+      source: doc_llm_35
+      sourceHandle: source
+      target: doc_llm_result
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: llm
+        targetType: llm
+      id: doc_llm_35-fail-branch-doc_llm_25-target
+      source: doc_llm_35
+      sourceHandle: fail-branch
+      target: doc_llm_25
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: llm
+        targetType: variable-aggregator
+      id: doc_llm_25-source-doc_llm_result-target
+      source: doc_llm_25
+      sourceHandle: source
+      target: doc_llm_result
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: variable-aggregator
+        targetType: variable-aggregator
+      id: doc_llm_result-source-analysis_agg-target
+      source: doc_llm_result
+      sourceHandle: source
+      target: analysis_agg
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: llm
+        targetType: variable-aggregator
+      id: url_llm-source-url_llm_result-target
+      source: url_llm
+      sourceHandle: source
+      target: url_llm_result
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: llm
+        targetType: llm
+      id: url_llm-fail-branch-url_llm_35-target
+      source: url_llm
+      sourceHandle: fail-branch
+      target: url_llm_35
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: llm
+        targetType: variable-aggregator
+      id: url_llm_35-source-url_llm_result-target
+      source: url_llm_35
+      sourceHandle: source
+      target: url_llm_result
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: llm
+        targetType: llm
+      id: url_llm_35-fail-branch-url_llm_25-target
+      source: url_llm_35
+      sourceHandle: fail-branch
+      target: url_llm_25
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: llm
+        targetType: variable-aggregator
+      id: url_llm_25-source-url_llm_result-target
+      source: url_llm_25
+      sourceHandle: source
+      target: url_llm_result
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: variable-aggregator
+        targetType: variable-aggregator
+      id: url_llm_result-source-analysis_agg-target
+      source: url_llm_result
+      sourceHandle: source
+      target: analysis_agg
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: llm
+        targetType: variable-aggregator
+      id: yt_llm-source-yt_llm_result-target
+      source: yt_llm
+      sourceHandle: source
+      target: yt_llm_result
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: llm
+        targetType: llm
+      id: yt_llm-fail-branch-yt_llm_35-target
+      source: yt_llm
+      sourceHandle: fail-branch
+      target: yt_llm_35
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: llm
+        targetType: variable-aggregator
+      id: yt_llm_35-source-yt_llm_result-target
+      source: yt_llm_35
+      sourceHandle: source
+      target: yt_llm_result
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: llm
+        targetType: llm
+      id: yt_llm_35-fail-branch-yt_llm_25-target
+      source: yt_llm_35
+      sourceHandle: fail-branch
+      target: yt_llm_25
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: llm
+        targetType: variable-aggregator
+      id: yt_llm_25-source-yt_llm_result-target
+      source: yt_llm_25
+      sourceHandle: source
+      target: yt_llm_result
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: variable-aggregator
+        targetType: variable-aggregator
+      id: yt_llm_result-source-analysis_agg-target
+      source: yt_llm_result
+      sourceHandle: source
+      target: analysis_agg
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    nodes:
+    - data:
+        selected: false
+        title: 入力
+        type: start
+        variables: []
+      height: 73
+      id: start
+      position:
+        x: 0
+        y: 300
+      positionAbsolute:
+        x: 0
+        y: 300
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 260
+    - data:
+        cases:
+        - case_id: has_key
+          conditions:
+          - comparison_operator: not empty
+            id: c-key
+            value: ''
+            varType: string
+            variable_selector:
+            - env
+            - KNOWLEDGE_API_KEY
+          id: has_key
+          logical_operator: and
+        desc: ''
+        selected: false
+        title: APIキー確認
+        type: if-else
+      height: 126
+      id: key_check
+      position:
+        x: 300
+        y: 300
+      positionAbsolute:
+        x: 300
+        y: 300
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 260
+    - data:
+        answer: '⚙️ 初回設定が必要です。
+
+
+          Knowledge → Service API でKnowledge APIキーを作成し、このアプリの環境変数 `KNOWLEDGE_API_KEY` に設定してください。'
+        selected: false
+        title: 初回設定案内
+        type: answer
+        variables: []
+      height: 130
+      id: key_error
+      position:
+        x: 600
+        y: 530
+      positionAbsolute:
+        x: 600
+        y: 530
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 260
+    - data:
+        context:
+          enabled: false
+          variable_selector: []
+        desc: ''
+        memory:
+          query_prompt_template: '{{#sys.query#}}'
+          role_prefix:
+            assistant: ''
+            user: ''
+          window:
+            enabled: false
+            size: 10
+        model:
+          completion_params:
+            temperature: 0.1
+          mode: chat
+          name: gemini-3.6-flash
+          provider: langgenius/gemini/google
+        prompt_template:
+        - id: pi1
+          role: system
+          text: "あなたは個人用メモアプリ MemoBrain の意図解析器です。\nユーザー入力を必ずJSONオブジェクト1個だけで返してください。Markdownや説明は禁止です。\naction は add, search, list, delete, complete, update, favorite, help のいずれか。\n普通のメモ/アイデア/URL/買い物/TODOを残す→add、過去メモを探す/質問→search、最近のメモ/一般的な一覧→list、\n保存した動画一覧/YouTube一覧/動画URL一覧/動画を見せて→search（queryには「youtube 動画 URL」とユーザー指定の検索語を含める）、\n削除→delete、TODO完了→complete、追記/修正→update、お気に入り登録/解除→favorite、使い方→help。迷ったらadd。\nJSON:\n{\"action\":\"add\",\"title\":\"短い日本語タイトル\",\"content\":\"保存する元内容\",\"query\":\"検索用語\",\"target\":\"対象メモ特定語\",\n\"memo_type\":\"memo|todo|idea|url|shopping|tech|work|schedule\",\"category\":\"短いカテゴリ\",\"tags\":\"カンマ区切り最大5個\",\n\"due_date\":\"明示期限または空文字\",\"update_instruction\":\"更新等の具体的指示または空文字\"}\naddでは情報を落とさずcontentに保持し、title/category/tagsを生成する。管理操作ではtargetを具体化する。\n追加で source_type=text, source_url=\"\", summary, key_points, todo も出力してください。\n必ずJSONオブジェクト1個だけ返してください。Markdownは禁止。\n{\n \"action\":\"add\",\n \"title\":\"短い日本語タイトル\",\n \"content\":\"保存する詳細内容\",\n \"query\":\"\",\n \"\
+            target\":\"\",\n \"memo_type\":\"memo|todo|idea|url|shopping|tech|work|schedule\",\n \"category\":\"短いカテゴリ\",\n \"tags\":\"カンマ区切り最大5個\",\n \"due_date\":\"期限または空文字\",\n \"update_instruction\":\"\",\n \"source_type\":\"text|image|video|youtube|web|document\",\n \"source_url\":\"元URLまたは空文字\",\n \"summary\":\"2〜5行の要約\",\n \"key_points\":\"重要点を箇条書き文字列\",\n \"todo\":\"内容から明確に発生するTODO。なければ空文字\"\n}"
+        - id: pi2
+          role: user
+          text: '{{#sys.query#}}'
+        selected: false
+        title: 意図解析 [3.6 Flash]
+        type: llm
+        variables: []
+        vision:
+          enabled: false
+        error_strategy: fail-branch
+      height: 120
+      id: intent_llm
+      position:
+        x: 600
+        y: 220
+      positionAbsolute:
+        x: 600
+        y: 220
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 260
+    - data:
+        code: "import json\nimport re\nfrom datetime import datetime, timezone, timedelta\n\ndef _json(s):\n    s = (s or \"\").strip()\n    s = re.sub(r\"^```(?:json)?\\s*\", \"\", s, flags=re.I)\n    s = re.sub(r\"\\s*```$\", \"\", s)\n    try:\n        return json.loads(s)\n    except Exception:\n        m = re.search(r\"\\{.*\\}\", s, re.S)\n        if m:\n            try:\n                return json.loads(m.group(0))\n            except Exception:\n                pass\n    return {}\n\ndef main(raw: str, user_query: str) -> dict:\n    d = _json(raw)\n    a = str(d.get(\"action\") or \"add\").lower().strip()\n    allowed = {\"add\", \"search\", \"list\", \"delete\", \"complete\", \"update\", \"favorite\", \"help\"}\n    if a not in allowed:\n        a = \"add\"\n    q = user_query or \"\"\n    url_match = re.search(r\"https?://[^\\s<>]+\", q)\n    fallback_url = url_match.group(0).rstrip(\".,);]}>\\\"'\") if url_match else \"\"\n    now = datetime.now(timezone.utc).astimezone(timezone(timedelta(hours=9))).strftime(\"\
+          %Y-%m-%d %H:%M:%S\")\n    return {\n        \"action\": a,\n        \"title\": str(d.get(\"title\") or q[:36] or \"メモ\"),\n        \"content\": str(d.get(\"content\") or d.get(\"summary\") or q),\n        \"query\": str(d.get(\"query\") or q),\n        \"target\": str(d.get(\"target\") or d.get(\"query\") or q),\n        \"memo_type\": str(d.get(\"memo_type\") or \"memo\"),\n        \"category\": str(d.get(\"category\") or \"未分類\"),\n        \"tags\": str(d.get(\"tags\") or \"\"),\n        \"due_date\": str(d.get(\"due_date\") or \"\"),\n        \"instruction\": str(d.get(\"update_instruction\") or \"\"),\n        \"now_jst\": now,\n        \"source_type\": str(d.get(\"source_type\") or \"text\"),\n        \"source_url\": str(d.get(\"source_url\") or fallback_url or \"\"),\n        \"summary\": str(d.get(\"summary\") or \"\"),\n        \"key_points\": str(d.get(\"key_points\") or \"\"),\n        \"todo\": str(d.get(\"todo\") or \"\"),\n    }\n"
+        code_language: python3
+        outputs:
+          action:
+            children: null
+            type: string
+          title:
+            children: null
+            type: string
+          content:
+            children: null
+            type: string
+          query:
+            children: null
+            type: string
+          target:
+            children: null
+            type: string
+          memo_type:
+            children: null
+            type: string
+          category:
+            children: null
+            type: string
+          tags:
+            children: null
+            type: string
+          due_date:
+            children: null
+            type: string
+          instruction:
+            children: null
+            type: string
+          now_jst:
+            children: null
+            type: string
+          source_type:
+            children: null
+            type: string
+          source_url:
+            children: null
+            type: string
+          summary:
+            children: null
+            type: string
+          key_points:
+            children: null
+            type: string
+          todo:
+            children: null
+            type: string
+        selected: false
+        title: 解析結果整形
+        type: code
+        variables:
+        - value_selector:
+          - analysis_agg
+          - output
+          variable: raw
+        - value_selector:
+          - sys
+          - query
+          variable: user_query
+      height: 110
+      id: intent_parse
+      position:
+        x: 3300
+        y: 220
+      positionAbsolute:
+        x: 3300
+        y: 220
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 260
+    - data:
+        cases:
+        - case_id: cached
+          conditions:
+          - comparison_operator: not empty
+            id: c-cache
+            value: ''
+            varType: string
+            variable_selector:
+            - conversation
+            - dataset_id
+          id: cached
+          logical_operator: and
+        desc: ''
+        selected: false
+        title: Knowledge IDキャッシュ
+        type: if-else
+      height: 126
+      id: cache_check
+      position:
+        x: 3600
+        y: 220
+      positionAbsolute:
+        x: 3600
+        y: 220
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 260
+    - data:
+        authorization:
+          config: null
+          type: no-auth
+        body:
+          data: []
+          type: none
+        desc: ''
+        headers: 'Authorization: Bearer {{#env.KNOWLEDGE_API_KEY#}}
+
+          Content-Type: application/json'
+        method: get
+        params: ''
+        retry_config:
+          max_retries: 2
+          retry_enabled: true
+          retry_interval: 500
+        selected: false
+        ssl_verify: true
+        timeout:
+          max_connect_timeout: 30
+          max_read_timeout: 60
+          max_write_timeout: 60
+        title: MemoBrain Knowledge検索
+        type: http-request
+        variables: []
+        url: '{{#env.DIFY_API_BASE#}}/datasets?keyword={{#env.DATASET_NAME#}}&limit=20'
+      height: 130
+      id: kb_list_http
+      position:
+        x: 3900
+        y: 430
+      positionAbsolute:
+        x: 3900
+        y: 430
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 260
+    - data:
+        code: "import json\ndef main(body:str,dataset_name:str)->dict:\n    try:d=json.loads(body or \"{}\")\n    except:d={}\n    n=(dataset_name or \"MemoBrain\").strip().lower()\n    x=next((x for x in d.get(\"data\",[]) if str(x.get(\"name\",\"\")).strip().lower()==n),None)\n    return {\"found\":\"true\" if x else \"false\",\"dataset_id\":str(x.get(\"id\",\"\")) if x else \"\"}"
+        code_language: python3
+        outputs:
+          found:
+            children: null
+            type: string
+          dataset_id:
+            children: null
+            type: string
+        selected: false
+        title: Knowledge ID取得
+        type: code
+        variables:
+        - value_selector:
+          - kb_list_http
+          - body
+          variable: body
+        - value_selector:
+          - env
+          - DATASET_NAME
+          variable: dataset_name
+      height: 100
+      id: kb_lookup
+      position:
+        x: 4200
+        y: 430
+      positionAbsolute:
+        x: 4200
+        y: 430
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 260
+    - data:
+        cases:
+        - case_id: found
+          conditions:
+          - comparison_operator: is
+            id: c-found
+            value: 'true'
+            varType: string
+            variable_selector:
+            - kb_lookup
+            - found
+          id: found
+          logical_operator: and
+        desc: ''
+        selected: false
+        title: Knowledge存在確認
+        type: if-else
+      height: 126
+      id: kb_exists
+      position:
+        x: 4500
+        y: 430
+      positionAbsolute:
+        x: 4500
+        y: 430
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 260
+    - data:
+        items:
+        - input_type: variable
+          operation: over-write
+          value:
+          - kb_lookup
+          - dataset_id
+          variable_selector:
+          - conversation
+          - dataset_id
+        selected: false
+        title: Knowledge ID保持
+        type: assigner
+        version: '2'
+      height: 84
+      id: assign_existing
+      position:
+        x: 4800
+        y: 320
+      positionAbsolute:
+        x: 4800
+        y: 320
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 260
+    - data:
+        authorization:
+          config: null
+          type: no-auth
+        body:
+          data:
+          - id: key-value-kb_create_http
+            key: ''
+            type: text
+            value: '{"name":"{{#env.DATASET_NAME#}}","description":"MemoBrain personal memo storage","permission":"only_me","provider":"vendor","indexing_technique":"economy"}'
+          type: json
+        desc: ''
+        headers: 'Authorization: Bearer {{#env.KNOWLEDGE_API_KEY#}}
+
+          Content-Type: application/json'
+        method: post
+        params: ''
+        retry_config:
+          max_retries: 2
+          retry_enabled: true
+          retry_interval: 500
+        selected: false
+        ssl_verify: true
+        timeout:
+          max_connect_timeout: 30
+          max_read_timeout: 60
+          max_write_timeout: 60
+        title: MemoBrain Knowledge自動作成
+        type: http-request
+        variables: []
+        url: '{{#env.DIFY_API_BASE#}}/datasets'
+      height: 150
+      id: kb_create_http
+      position:
+        x: 4800
+        y: 560
+      positionAbsolute:
+        x: 4800
+        y: 560
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 260
+    - data:
+        code: "import json\ndef main(body:str)->dict:\n    try:d=json.loads(body or \"{}\")\n    except:d={}\n    return {\"dataset_id\":str(d.get(\"id\") or \"\")}"
+        code_language: python3
+        outputs:
+          dataset_id:
+            children: null
+            type: string
+        selected: false
+        title: 作成Knowledge ID取得
+        type: code
+        variables:
+        - value_selector:
+          - kb_create_http
+          - body
+          variable: body
+      height: 90
+      id: kb_create_parse
+      position:
+        x: 5100
+        y: 560
+      positionAbsolute:
+        x: 5100
+        y: 560
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 260
+    - data:
+        items:
+        - input_type: variable
+          operation: over-write
+          value:
+          - kb_create_parse
+          - dataset_id
+          variable_selector:
+          - conversation
+          - dataset_id
+        selected: false
+        title: 新規Knowledge ID保持
+        type: assigner
+        version: '2'
+      height: 84
+      id: assign_created
+      position:
+        x: 5400
+        y: 560
+      positionAbsolute:
+        x: 5400
+        y: 560
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 260
+    - data:
+        cases:
+        - case_id: add
+          conditions:
+          - comparison_operator: is
+            id: c-add
+            value: add
+            varType: string
+            variable_selector:
+            - intent_parse
+            - action
+          id: add
+          logical_operator: and
+        - case_id: search
+          conditions:
+          - comparison_operator: is
+            id: c-search
+            value: search
+            varType: string
+            variable_selector:
+            - intent_parse
+            - action
+          id: search
+          logical_operator: and
+        - case_id: list
+          conditions:
+          - comparison_operator: is
+            id: c-list
+            value: list
+            varType: string
+            variable_selector:
+            - intent_parse
+            - action
+          id: list
+          logical_operator: and
+        - case_id: delete
+          conditions:
+          - comparison_operator: is
+            id: c-delete
+            value: delete
+            varType: string
+            variable_selector:
+            - intent_parse
+            - action
+          id: delete
+          logical_operator: and
+        - case_id: complete
+          conditions:
+          - comparison_operator: is
+            id: c-complete
+            value: complete
+            varType: string
+            variable_selector:
+            - intent_parse
+            - action
+          id: complete
+          logical_operator: and
+        - case_id: update
+          conditions:
+          - comparison_operator: is
+            id: c-update
+            value: update
+            varType: string
+            variable_selector:
+            - intent_parse
+            - action
+          id: update
+          logical_operator: and
+        - case_id: favorite
+          conditions:
+          - comparison_operator: is
+            id: c-favorite
+            value: favorite
+            varType: string
+            variable_selector:
+            - intent_parse
+            - action
+          id: favorite
+          logical_operator: and
+        desc: ''
+        selected: false
+        title: 操作ルーター
+        type: if-else
+      height: 300
+      id: action_router
+      position:
+        x: 5750
+        y: 280
+      positionAbsolute:
+        x: 5750
+        y: 280
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 260
+    - data:
+        code: "import json\n\ndef main(title: str, content: str, memo_type: str, category: str, tags: str, due_date: str, now_jst: str,\n         source_type: str, source_url: str, summary: str, key_points: str, todo: str) -> dict:\n    video_url_line = f\"動画URL: {source_url}\\n\" if source_url and (source_type or \"\").lower() in (\"youtube\", \"video\") else \"\"\n    text = (\n        \"[MemoBrain]\\n\"\n        f\"title: {title}\\n\"\n        f\"type: {memo_type or 'memo'}\\n\"\n        \"status: open\\n\"\n        \"favorite: false\\n\"\n        f\"source_type: {source_type or 'text'}\\n\"\n        f\"source_url: {source_url or ''}\\n\"\n        f\"{video_url_line}\"\n        f\"category: {category or '未分類'}\\n\"\n        f\"tags: {tags or ''}\\n\"\n        f\"due_date: {due_date or ''}\\n\"\n        f\"created_at: {now_jst}\\n\"\n        f\"updated_at: {now_jst}\\n\"\n        \"---\\n\"\n        f\"summary:\\n{summary or ''}\\n\\n\"\n        f\"key_points:\\n{key_points or ''}\\n\\\
+          n\"\n        f\"todo:\\n{todo or ''}\\n\\n\"\n        f\"content:\\n{content}\\n\"\n    )\n    payload = {\n        \"name\": title,\n        \"text\": text,\n        \"indexing_technique\": \"economy\",\n        \"doc_form\": \"text_model\",\n        \"doc_language\": \"Japanese\",\n    }\n    return {\"payload\": json.dumps(payload, ensure_ascii=False), \"display_title\": title, \"url_line\": (f\"URL: {source_url}\" if source_url else \"\")}\n"
+        code_language: python3
+        outputs:
+          payload:
+            children: null
+            type: string
+          display_title:
+            children: null
+            type: string
+          url_line:
+            children: null
+            type: string
+        selected: false
+        title: 保存データ作成
+        type: code
+        variables:
+        - value_selector:
+          - intent_parse
+          - title
+          variable: title
+        - value_selector:
+          - intent_parse
+          - content
+          variable: content
+        - value_selector:
+          - intent_parse
+          - memo_type
+          variable: memo_type
+        - value_selector:
+          - intent_parse
+          - category
+          variable: category
+        - value_selector:
+          - intent_parse
+          - tags
+          variable: tags
+        - value_selector:
+          - intent_parse
+          - due_date
+          variable: due_date
+        - value_selector:
+          - intent_parse
+          - now_jst
+          variable: now_jst
+        - value_selector:
+          - intent_parse
+          - source_type
+          variable: source_type
+        - value_selector:
+          - intent_parse
+          - source_url
+          variable: source_url
+        - value_selector:
+          - intent_parse
+          - summary
+          variable: summary
+        - value_selector:
+          - intent_parse
+          - key_points
+          variable: key_points
+        - value_selector:
+          - intent_parse
+          - todo
+          variable: todo
+      height: 120
+      id: add_build
+      position:
+        x: 6100
+        y: -80
+      positionAbsolute:
+        x: 6100
+        y: -80
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 260
+    - data:
+        authorization:
+          config: null
+          type: no-auth
+        body:
+          data:
+          - id: key-value-add_http
+            key: ''
+            type: text
+            value: '{{#add_build.payload#}}'
+          type: json
+        desc: ''
+        headers: 'Authorization: Bearer {{#env.KNOWLEDGE_API_KEY#}}
+
+          Content-Type: application/json'
+        method: post
+        params: ''
+        retry_config:
+          max_retries: 2
+          retry_enabled: true
+          retry_interval: 500
+        selected: false
+        ssl_verify: true
+        timeout:
+          max_connect_timeout: 30
+          max_read_timeout: 60
+          max_write_timeout: 60
+        title: メモ保存
+        type: http-request
+        variables: []
+        url: '{{#env.DIFY_API_BASE#}}/datasets/{{#conversation.dataset_id#}}/document/create-by-text'
+      height: 130
+      id: add_http
+      position:
+        x: 6450
+        y: -80
+      positionAbsolute:
+        x: 6450
+        y: -80
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 260
+    - data:
+        answer: '✅ メモしました。
+
+
+          **{{#add_build.display_title#}}**
+
+
+          種類: {{#intent_parse.source_type#}}
+
+          カテゴリ: {{#intent_parse.category#}}
+
+          タグ: {{#intent_parse.tags#}}
+
+          {{#add_build.url_line#}}
+
+
+          {{#intent_parse.summary#}}'
+        selected: false
+        title: 保存完了
+        type: answer
+        variables: []
+      height: 130
+      id: add_answer
+      position:
+        x: 6800
+        y: -80
+      positionAbsolute:
+        x: 6800
+        y: -80
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 260
+    - data:
+        code: 'import json
+
+          def main(query:str)->dict:return {"payload":json.dumps({"query":(query or "メモ").strip()},ensure_ascii=False)}'
+        code_language: python3
+        outputs:
+          payload:
+            children: null
+            type: string
+        selected: false
+        title: 検索クエリ作成
+        type: code
+        variables:
+        - value_selector:
+          - intent_parse
+          - query
+          variable: query
+      height: 90
+      id: search_build
+      position:
+        x: 6100
+        y: 150
+      positionAbsolute:
+        x: 6100
+        y: 150
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 260
+    - data:
+        authorization:
+          config: null
+          type: no-auth
+        body:
+          data:
+          - id: key-value-search_http
+            key: ''
+            type: text
+            value: '{{#search_build.payload#}}'
+          type: json
+        desc: ''
+        headers: 'Authorization: Bearer {{#env.KNOWLEDGE_API_KEY#}}
+
+          Content-Type: application/json'
+        method: post
+        params: ''
+        retry_config:
+          max_retries: 2
+          retry_enabled: true
+          retry_interval: 500
+        selected: false
+        ssl_verify: true
+        timeout:
+          max_connect_timeout: 30
+          max_read_timeout: 60
+          max_write_timeout: 60
+        title: Knowledge検索
+        type: http-request
+        variables: []
+        url: '{{#env.DIFY_API_BASE#}}/datasets/{{#conversation.dataset_id#}}/retrieve'
+      height: 130
+      id: search_http
+      position:
+        x: 6450
+        y: 150
+      positionAbsolute:
+        x: 6450
+        y: 150
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 260
+    - data:
+        code: "import json\n\ndef main(body: str) -> dict:\n    try:\n        data = json.loads(body or \"{}\")\n    except Exception:\n        data = {}\n    records = data.get(\"records\") or []\n    scores = []\n    for record in records:\n        try:\n            segment = record.get(\"segment\") or {}\n            score = record.get(\"score\")\n            if score is None:\n                score = segment.get(\"score\")\n            scores.append(float(score or 0))\n        except Exception:\n            pass\n    max_score = max(scores) if scores else 0.0\n    has_knowledge = bool(records) and max_score >= 0.35\n    return {\n        \"route\": \"knowledge\" if has_knowledge else \"web\",\n        \"record_count\": len(records),\n        \"max_score\": max_score,\n    }\n"
+        code_language: python3
+        outputs:
+          route:
+            children: null
+            type: string
+          record_count:
+            children: null
+            type: number
+          max_score:
+            children: null
+            type: number
+        selected: false
+        title: Knowledge充足判定
+        type: code
+        variables:
+        - value_selector:
+          - search_http
+          - body
+          variable: body
+      height: 110
+      id: search_gate
+      position:
+        x: 6770
+        y: 330
+      positionAbsolute:
+        x: 6770
+        y: 330
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 260
+    - data:
+        cases:
+        - case_id: knowledge
+          conditions:
+          - comparison_operator: is
+            id: c-search-knowledge
+            value: knowledge
+            varType: string
+            variable_selector:
+            - search_gate
+            - route
+          id: knowledge
+          logical_operator: and
+        desc: Knowledgeに十分な根拠がある場合だけ既存回答を使用
+        selected: false
+        title: KnowledgeかWebか
+        type: if-else
+      height: 126
+      id: search_route
+      position:
+        x: 7100
+        y: 330
+      positionAbsolute:
+        x: 7100
+        y: 330
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 260
+    - data:
+        code: "def main(parsed_query: str, user_query: str) -> dict:\n    query = (parsed_query or \"\").strip()\n    if not query:\n        query = (user_query or \"\").strip()\n    if not query:\n        query = \"MemoBrain 調査\"\n    return {\"query\": query}\n"
+        code_language: python3
+        outputs:
+          query:
+            children: null
+            type: string
+        selected: false
+        title: Web検索Query作成
+        type: code
+        variables:
+        - value_selector:
+          - intent_parse
+          - query
+          variable: parsed_query
+        - value_selector:
+          - sys
+          - query
+          variable: user_query
+      height: 110
+      id: web_query_build
+      position:
+        x: 7440
+        y: 330
+      positionAbsolute:
+        x: 7440
+        y: 330
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 260
+    - data:
+        desc: Knowledgeに十分な根拠がない場合だけ無料のDuckDuckGo検索を実行
+        plugin_id: langgenius/duckduckgo
+        provider_id: langgenius/duckduckgo/duckduckgo
+        provider_name: langgenius/duckduckgo/duckduckgo
+        provider_type: builtin
+        retry_config:
+          max_retries: 2
+          retry_enabled: true
+          retry_interval: 1000
+        selected: false
+        title: Web検索（DuckDuckGo）
+        tool_configurations:
+          max_results:
+            type: constant
+            value: 5
+          require_summary:
+            type: constant
+            value: 0
+        tool_description: Search the web with DuckDuckGo without an API key.
+        tool_label: DuckDuckGo Search
+        tool_name: ddgo_search
+        tool_node_version: '2'
+        tool_parameters:
+          query:
+            type: mixed
+            value: '{{#web_query_build.query#}}'
+        type: tool
+      height: 160
+      id: web_search
+      position:
+        x: 7440
+        y: 470
+      positionAbsolute:
+        x: 7440
+        y: 470
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 260
+    - data:
+        code: "def main(answer: str) -> dict:\n    text = (answer or \"\").strip()\n    no_result_markers = (\n        \"__MEMOBRAIN_WEB_SEARCH__\",\n        \"該当するメモは見つかりませんでした\",\n        \"該当するメモが見つかりませんでした\",\n    )\n    needs_web = not text or any(marker in text for marker in no_result_markers)\n    return {\"route\": \"web\" if needs_web else \"knowledge\"}\n"
+        code_language: python3
+        outputs:
+          route:
+            children: null
+            type: string
+        selected: false
+        title: Knowledge回答再判定
+        type: code
+        variables:
+        - value_selector:
+          - search_llm_result
+          - output
+          variable: answer
+      height: 100
+      id: search_answer_gate
+      position:
+        x: 7130
+        y: 80
+      positionAbsolute:
+        x: 7130
+        y: 80
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 260
+    - data:
+        cases:
+        - case_id: knowledge
+          conditions:
+          - comparison_operator: is
+            id: c-search-answer-knowledge
+            value: knowledge
+            varType: string
+            variable_selector:
+            - search_answer_gate
+            - route
+          id: knowledge
+          logical_operator: and
+        desc: Knowledge回答に実際の根拠がなければWeb検索へ切り替える
+        selected: false
+        title: Knowledge回答を採用？
+        type: if-else
+      height: 126
+      id: search_answer_route
+      position:
+        x: 7440
+        y: 80
+      positionAbsolute:
+        x: 7440
+        y: 80
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 260
+    - data:
+        code: "def main(text: str) -> dict:\n    value = (text or \"\").strip()\n    failed_markers = (\"no result\", \"no results\", \"結果がありません\", \"error\")\n    lowered = value.lower()\n    usable = len(value) >= 80 and not any(x in lowered for x in failed_markers)\n    return {\"has_results\": \"true\" if usable else \"false\", \"search_text\": value[:50000]}\n"
+        code_language: python3
+        outputs:
+          has_results:
+            children: null
+            type: string
+          search_text:
+            children: null
+            type: string
+        selected: false
+        title: Web検索結果確認
+        type: code
+        variables:
+        - value_selector:
+          - web_search
+          - text
+          variable: text
+      height: 100
+      id: web_check
+      position:
+        x: 7770
+        y: 470
+      positionAbsolute:
+        x: 7770
+        y: 470
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 260
+    - data:
+        cases:
+        - case_id: results
+          conditions:
+          - comparison_operator: is
+            id: c-web-results
+            value: 'true'
+            varType: string
+            variable_selector:
+            - web_check
+            - has_results
+          id: results
+          logical_operator: and
+        desc: ''
+        selected: false
+        title: Web検索成功？
+        type: if-else
+      height: 126
+      id: web_route
+      position:
+        x: 8100
+        y: 470
+      positionAbsolute:
+        x: 8100
+        y: 470
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 260
+    - data:
+        answer: Knowledgeに該当情報がなくWeb検索も完了できませんでした。DuckDuckGoプラグインがインストール済みか、Difyサーバーから外部検索へ接続できるか確認してください。
+        selected: false
+        title: Web検索失敗
+        type: answer
+        variables: []
+      height: 110
+      id: web_error
+      position:
+        x: 8440
+        y: 650
+      positionAbsolute:
+        x: 8440
+        y: 650
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 260
+    - data:
+        context:
+          enabled: false
+          variable_selector: []
+        desc: Web検索結果から出典付き記事を作成
+        memory:
+          query_prompt_template: '{{#sys.query#}}'
+          role_prefix:
+            assistant: ''
+            user: ''
+          window:
+            enabled: false
+            size: 10
+        model:
+          completion_params:
+            temperature: 0.2
+          mode: chat
+          name: gemini-3.6-flash
+          provider: langgenius/gemini/google
+        prompt_template:
+        - id: web-article-system
+          role: system
+          text: 'あなたはMemoBrainの調査記事作成係です。
+
+            Knowledgeに十分な情報がなかったため、DuckDuckGo検索結果だけを根拠に日本語の記事を作成してください。
+
+
+            必須ルール:
+
+            - 先頭は「# タイトル」
+
+            - 続けて要約、本文、重要ポイント、注意点を整理
+
+            - 末尾に「## 出典」を設け、検索結果に実在するURLをMarkdownリンクで列挙
+
+            - URL、日付、固有名詞、数値を推測しない
+
+            - 情報が断片的または相互に矛盾する場合は、その限界を明記
+
+            - 検索結果に存在しない事実を追加しない
+
+            - そのままKnowledgeへ保存して再利用できる完成記事にする
+
+
+            質問:
+
+            {{#intent_parse.query#}}
+
+
+            DuckDuckGo検索結果:
+
+            {{#web_check.search_text#}}
+
+            '
+        selected: false
+        title: Web調査記事生成 [3.6 Flash]
+        type: llm
+        variables: []
+        vision:
+          enabled: false
+        error_strategy: fail-branch
+      height: 150
+      id: web_article_llm
+      position:
+        x: 8440
+        y: 430
+      positionAbsolute:
+        x: 8440
+        y: 430
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 260
+    - data:
+        code: "import json\nimport re\nfrom datetime import datetime, timedelta, timezone\n\ndef main(article: str, query: str) -> dict:\n    text = (article or \"\").strip()\n    match = re.search(r\"^#\\s+(.+)$\", text, re.MULTILINE)\n    title = match.group(1).strip() if match else (query or \"Web調査メモ\").strip()\n    title = title[:180] or \"Web調査メモ\"\n    now = datetime.now(timezone(timedelta(hours=9))).isoformat(timespec=\"seconds\")\n    document = (\n        \"[MemoBrain]\\n\"\n        f\"title: {title}\\n\"\n        \"type: research\\n\"\n        \"status: open\\n\"\n        \"favorite: false\\n\"\n        \"source_type: web_search\\n\"\n        \"category: Web調査\\n\"\n        \"tags: web検索,自動調査\\n\"\n        f\"created_at: {now}\\n\"\n        f\"updated_at: {now}\\n\"\n        f\"search_query: {(query or '').strip()}\\n\"\n        \"---\\n\"\n        f\"{text}\\n\"\n    )\n    payload = {\n        \"name\": title,\n        \"text\": document,\n        \"indexing_technique\": \"\
+          economy\",\n        \"doc_form\": \"text_model\",\n        \"doc_language\": \"Japanese\",\n    }\n    return {\"payload\": json.dumps(payload, ensure_ascii=False), \"title\": title}\n"
+        code_language: python3
+        outputs:
+          payload:
+            children: null
+            type: string
+          title:
+            children: null
+            type: string
+        selected: false
+        title: Web記事保存データ作成
+        type: code
+        variables:
+        - value_selector:
+          - web_article_llm_result
+          - output
+          variable: article
+        - value_selector:
+          - intent_parse
+          - query
+          variable: query
+      height: 120
+      id: web_build
+      position:
+        x: 8780
+        y: 430
+      positionAbsolute:
+        x: 8780
+        y: 430
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 260
+    - data:
+        authorization:
+          config: null
+          type: no-auth
+        body:
+          data:
+          - id: key-value-web_save_http
+            key: ''
+            type: text
+            value: '{{#web_build.payload#}}'
+          type: json
+        desc: Web調査記事をMemoBrain Knowledgeへ登録
+        headers: 'Authorization: Bearer {{#env.KNOWLEDGE_API_KEY#}}
+
+          Content-Type: application/json'
+        method: post
+        params: ''
+        retry_config:
+          max_retries: 2
+          retry_enabled: true
+          retry_interval: 500
+        selected: false
+        ssl_verify: true
+        timeout:
+          max_connect_timeout: 30
+          max_read_timeout: 60
+          max_write_timeout: 60
+        title: Web調査記事をKnowledge登録
+        type: http-request
+        variables: []
+        url: '{{#env.DIFY_API_BASE#}}/datasets/{{#conversation.dataset_id#}}/document/create-by-text'
+      height: 140
+      id: web_save_http
+      position:
+        x: 9110
+        y: 430
+      positionAbsolute:
+        x: 9110
+        y: 430
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 260
+    - data:
+        answer: '🔎 Knowledgeに十分な情報がなかったため、Webを検索して記事を作成し、MemoBrainへ登録しました。
+
+
+          **{{#web_build.title#}}**
+
+
+          {{#web_article_llm_result.output#}}
+
+          '
+        selected: false
+        title: Web調査・登録完了
+        type: answer
+        variables: []
+      height: 140
+      id: web_answer
+      position:
+        x: 9440
+        y: 430
+      positionAbsolute:
+        x: 9440
+        y: 430
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 260
+    - data:
+        context:
+          enabled: false
+          variable_selector: []
+        desc: ''
+        memory:
+          query_prompt_template: '{{#sys.query#}}'
+          role_prefix:
+            assistant: ''
+            user: ''
+          window:
+            enabled: false
+            size: 10
+        model:
+          completion_params:
+            temperature: 0.2
+          mode: chat
+          name: gemini-3.6-flash
+          provider: langgenius/gemini/google
+        prompt_template:
+        - id: ps1
+          role: system
+          text: 'MemoBrainの検索回答係です。以下のKnowledge検索結果だけを根拠に日本語で答えてください。
+
+            各メモ内の source_url: または 動画URL: は重要な保存情報です。URLが存在する場合は省略・短縮・書き換えをせず、そのまま回答に含めてください。
+
+            ユーザーが「動画一覧」「YouTube一覧」「動画URL」「保存した動画」などを求めた場合は、該当する動画メモを番号付きで一覧化してください。 各項目は原則「タイトル — URL」の形式にし、必要なら次の行に短い要約を添えてください。 source_type が youtube または video のメモを優先し、URLが保存されているものは必ずURLを表示してください。 検索結果にURLがない場合はURLを推測・生成しないでください。
+
+            検索結果に質問へ直接答えられる根拠がない場合は、ほかの文を一切付けず `__MEMOBRAIN_WEB_SEARCH__` だけを出力してください。 根拠がある場合だけ通常回答を生成し、推測で補完しないでください。
+
+            質問: {{#intent_parse.query#}}
+
+            検索結果(JSON): {{#search_http.body#}}'
+        selected: false
+        title: 検索回答生成 [3.6 Flash]
+        type: llm
+        variables: []
+        vision:
+          enabled: false
+        error_strategy: fail-branch
+      height: 120
+      id: search_llm
+      position:
+        x: 6800
+        y: 150
+      positionAbsolute:
+        x: 6800
+        y: 150
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 260
+    - data:
+        answer: '{{#search_llm_result.output#}}'
+        selected: false
+        title: 検索回答
+        type: answer
+        variables: []
+      height: 100
+      id: search_answer
+      position:
+        x: 7150
+        y: 150
+      positionAbsolute:
+        x: 7150
+        y: 150
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 260
+    - data:
+        authorization:
+          config: null
+          type: no-auth
+        body:
+          data: []
+          type: none
+        desc: ''
+        headers: 'Authorization: Bearer {{#env.KNOWLEDGE_API_KEY#}}
+
+          Content-Type: application/json'
+        method: get
+        params: ''
+        retry_config:
+          max_retries: 2
+          retry_enabled: true
+          retry_interval: 500
+        selected: false
+        ssl_verify: true
+        timeout:
+          max_connect_timeout: 30
+          max_read_timeout: 60
+          max_write_timeout: 60
+        title: メモ一覧取得
+        type: http-request
+        variables: []
+        url: '{{#env.DIFY_API_BASE#}}/datasets/{{#conversation.dataset_id#}}/documents?page=1&limit=20'
+      height: 120
+      id: list_http
+      position:
+        x: 6100
+        y: 390
+      positionAbsolute:
+        x: 6100
+        y: 390
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 260
+    - data:
+        code: "import json\nfrom datetime import datetime,timezone,timedelta\ndef main(body:str)->dict:\n    try:d=json.loads(body or \"{}\")\n    except:d={}\n    a=d.get(\"data\") or []\n    if not a:return {\"text\":\"まだメモはありません。何でもそのまま入力すると保存できます。\"}\n    L=[\"\U0001F4DD MemoBrain 最近のメモ\"]\n    for i,x in enumerate(a[:20],1):\n        ds=\"\"\n        c=x.get(\"created_at\")\n        if isinstance(c,(int,float)):\n            ds=datetime.fromtimestamp(c,timezone.utc).astimezone(timezone(timedelta(hours=9))).strftime(\"%m/%d %H:%M\")\n        L.append(f\"{i}. {x.get('name') or '(無題)'}\"+(f\"  ({ds})\" if ds else \"\"))\n    return {\"text\":\"\\n\".join(L)}"
+        code_language: python3
+        outputs:
+          text:
+            children: null
+            type: string
+        selected: false
+        title: 一覧整形
+        type: code
+        variables:
+        - value_selector:
+          - list_http
+          - body
+          variable: body
+      height: 90
+      id: list_format
+      position:
+        x: 6450
+        y: 390
+      positionAbsolute:
+        x: 6450
+        y: 390
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 260
+    - data:
+        answer: '{{#list_format.text#}}'
+        selected: false
+        title: 一覧表示
+        type: answer
+        variables: []
+      height: 100
+      id: list_answer
+      position:
+        x: 6800
+        y: 390
+      positionAbsolute:
+        x: 6800
+        y: 390
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 260
+    - data:
+        code: 'import json
+
+          def main(query:str)->dict:return {"payload":json.dumps({"query":(query or "メモ").strip()},ensure_ascii=False)}'
+        code_language: python3
+        outputs:
+          payload:
+            children: null
+            type: string
+        selected: false
+        title: 対象メモ検索語作成
+        type: code
+        variables:
+        - value_selector:
+          - intent_parse
+          - target
+          variable: query
+      height: 90
+      id: manage_build
+      position:
+        x: 6100
+        y: 650
+      positionAbsolute:
+        x: 6100
+        y: 650
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 260
+    - data:
+        authorization:
+          config: null
+          type: no-auth
+        body:
+          data:
+          - id: key-value-manage_http
+            key: ''
+            type: text
+            value: '{{#manage_build.payload#}}'
+          type: json
+        desc: ''
+        headers: 'Authorization: Bearer {{#env.KNOWLEDGE_API_KEY#}}
+
+          Content-Type: application/json'
+        method: post
+        params: ''
+        retry_config:
+          max_retries: 2
+          retry_enabled: true
+          retry_interval: 500
+        selected: false
+        ssl_verify: true
+        timeout:
+          max_connect_timeout: 30
+          max_read_timeout: 60
+          max_write_timeout: 60
+        title: 対象メモ検索
+        type: http-request
+        variables: []
+        url: '{{#env.DIFY_API_BASE#}}/datasets/{{#conversation.dataset_id#}}/retrieve'
+      height: 130
+      id: manage_http
+      position:
+        x: 6450
+        y: 650
+      positionAbsolute:
+        x: 6450
+        y: 650
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 260
+    - data:
+        code: "import json\ndef main(body:str)->dict:\n    try:d=json.loads(body or \"{}\")\n    except:d={}\n    rs=d.get(\"records\") or []\n    if not rs:return {\"found\":\"false\",\"document_id\":\"\",\"document_name\":\"\",\"content\":\"\"}\n    s=(rs[0] or {}).get(\"segment\") or {}; doc=s.get(\"document\") or {}\n    return {\"found\":\"true\",\"document_id\":str(s.get(\"document_id\") or doc.get(\"id\") or \"\"),\n    \"document_name\":str(doc.get(\"name\") or \"メモ\"),\"content\":str(s.get(\"content\") or \"\")}"
+        code_language: python3
+        outputs:
+          found:
+            children: null
+            type: string
+          document_id:
+            children: null
+            type: string
+          document_name:
+            children: null
+            type: string
+          content:
+            children: null
+            type: string
+        selected: false
+        title: 対象メモ特定
+        type: code
+        variables:
+        - value_selector:
+          - manage_http
+          - body
+          variable: body
+      height: 100
+      id: target_parse
+      position:
+        x: 6800
+        y: 650
+      positionAbsolute:
+        x: 6800
+        y: 650
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 260
+    - data:
+        cases:
+        - case_id: found
+          conditions:
+          - comparison_operator: is
+            id: c-tf
+            value: 'true'
+            varType: string
+            variable_selector:
+            - target_parse
+            - found
+          id: found
+          logical_operator: and
+        desc: ''
+        selected: false
+        title: 対象あり？
+        type: if-else
+      height: 126
+      id: target_found
+      position:
+        x: 7150
+        y: 650
+      positionAbsolute:
+        x: 7150
+        y: 650
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 260
+    - data:
+        answer: 該当するメモを見つけられませんでした。タイトルやキーワードをもう少し具体的に指定してください。
+        selected: false
+        title: 対象なし
+        type: answer
+        variables: []
+      height: 110
+      id: not_found
+      position:
+        x: 7500
+        y: 900
+      positionAbsolute:
+        x: 7500
+        y: 900
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 260
+    - data:
+        cases:
+        - case_id: delete
+          conditions:
+          - comparison_operator: is
+            id: c-del
+            value: delete
+            varType: string
+            variable_selector:
+            - intent_parse
+            - action
+          id: delete
+          logical_operator: and
+        desc: ''
+        selected: false
+        title: 削除か更新か
+        type: if-else
+      height: 126
+      id: delete_or_update
+      position:
+        x: 7500
+        y: 650
+      positionAbsolute:
+        x: 7500
+        y: 650
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 260
+    - data:
+        authorization:
+          config: null
+          type: no-auth
+        body:
+          data: []
+          type: none
+        desc: ''
+        headers: 'Authorization: Bearer {{#env.KNOWLEDGE_API_KEY#}}
+
+          Content-Type: application/json'
+        method: delete
+        params: ''
+        retry_config:
+          max_retries: 2
+          retry_enabled: true
+          retry_interval: 500
+        selected: false
+        ssl_verify: true
+        timeout:
+          max_connect_timeout: 30
+          max_read_timeout: 60
+          max_write_timeout: 60
+        title: メモ削除
+        type: http-request
+        variables: []
+        url: '{{#env.DIFY_API_BASE#}}/datasets/{{#conversation.dataset_id#}}/documents/{{#target_parse.document_id#}}'
+      height: 120
+      id: delete_http
+      position:
+        x: 7850
+        y: 520
+      positionAbsolute:
+        x: 7850
+        y: 520
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 260
+    - data:
+        answer: 🗑️ 「{{#target_parse.document_name#}}」を削除しました。
+        selected: false
+        title: 削除完了
+        type: answer
+        variables: []
+      height: 100
+      id: delete_answer
+      position:
+        x: 8200
+        y: 520
+      positionAbsolute:
+        x: 8200
+        y: 520
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 260
+    - data:
+        code: "import json,re\nfrom datetime import datetime,timezone,timedelta\ndef setf(t,k,v):\n    p=rf\"(?m)^{re.escape(k)}:\\s*.*$\"; r=f\"{k}: {v}\"\n    return re.sub(p,r,t,count=1) if re.search(p,t) else r+\"\\n\"+t\ndef main(action:str,old_content:str,document_name:str,instruction:str)->dict:\n    t=old_content or \"\"; now=datetime.now(timezone.utc).astimezone(timezone(timedelta(hours=9))).strftime(\"%Y-%m-%d %H:%M:%S\")\n    if action==\"complete\":t=setf(t,\"status\",\"done\"); msg=f\"✅ 「{document_name}」を完了にしました。\"\n    elif action==\"favorite\":\n        off=any(w in (instruction or \"\").lower() for w in [\"解除\",\"外して\",\"はずして\",\"off\",\"false\",\"やめ\"])\n        t=setf(t,\"favorite\",\"false\" if off else \"true\"); msg=f\"⭐ 「{document_name}」のお気に入りを\"+(\"解除しました。\" if off else \"登録しました。\")\n    else:\n        if (instruction or \"\").strip():t=t.rstrip()+f\"\\n\\nupdates:\\n- {now}: {instruction.strip()}\\n\"\n        msg=f\"✏️ 「{document_name}」を更新しました。\"\n    t=setf(t,\"\
+          updated_at\",now)\n    return {\"payload\":json.dumps({\"name\":document_name,\"text\":t,\"doc_form\":\"text_model\",\"doc_language\":\"Japanese\"},ensure_ascii=False),\"message\":msg}"
+        code_language: python3
+        outputs:
+          payload:
+            children: null
+            type: string
+          message:
+            children: null
+            type: string
+        selected: false
+        title: 更新データ作成
+        type: code
+        variables:
+        - value_selector:
+          - intent_parse
+          - action
+          variable: action
+        - value_selector:
+          - target_parse
+          - content
+          variable: old_content
+        - value_selector:
+          - target_parse
+          - document_name
+          variable: document_name
+        - value_selector:
+          - intent_parse
+          - instruction
+          variable: instruction
+      height: 110
+      id: update_build
+      position:
+        x: 7850
+        y: 760
+      positionAbsolute:
+        x: 7850
+        y: 760
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 260
+    - data:
+        authorization:
+          config: null
+          type: no-auth
+        body:
+          data:
+          - id: key-value-update_http
+            key: ''
+            type: text
+            value: '{{#update_build.payload#}}'
+          type: json
+        desc: ''
+        headers: 'Authorization: Bearer {{#env.KNOWLEDGE_API_KEY#}}
+
+          Content-Type: application/json'
+        method: post
+        params: ''
+        retry_config:
+          max_retries: 2
+          retry_enabled: true
+          retry_interval: 500
+        selected: false
+        ssl_verify: true
+        timeout:
+          max_connect_timeout: 30
+          max_read_timeout: 60
+          max_write_timeout: 60
+        title: メモ更新
+        type: http-request
+        variables: []
+        url: '{{#env.DIFY_API_BASE#}}/datasets/{{#conversation.dataset_id#}}/documents/{{#target_parse.document_id#}}/update-by-text'
+      height: 130
+      id: update_http
+      position:
+        x: 8200
+        y: 760
+      positionAbsolute:
+        x: 8200
+        y: 760
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 260
+    - data:
+        answer: '{{#update_build.message#}}'
+        selected: false
+        title: 更新完了
+        type: answer
+        variables: []
+      height: 100
+      id: update_answer
+      position:
+        x: 8550
+        y: 760
+      positionAbsolute:
+        x: 8550
+        y: 760
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 260
+    - data:
+        answer: '🧠 **MemoBrain の使い方**
+
+
+          - メモ: `PicoのUSB配線をあとで確認する`
+
+          - TODO: `来週NASバックアップを見直す`
+
+          - 検索: `Difyについて前に何メモした？`
+
+          - 一覧: `最近のメモを見せて`
+
+          - 完了: `NASバックアップのメモを完了にして`
+
+          - 更新: `PicoのメモにGP0は反応したと追記`
+
+          - 削除: `古いPicoのメモを削除して`
+
+          - お気に入り: `Difyの記事生成メモをお気に入りにして`'
+        selected: false
+        title: ヘルプ
+        type: answer
+        variables: []
+      height: 180
+      id: help_answer
+      position:
+        x: 6100
+        y: 1000
+      positionAbsolute:
+        x: 6100
+        y: 1000
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 260
+    - data:
+        cases:
+        - case_id: image
+          conditions:
+          - comparison_operator: contains
+            id: src-image
+            value: '[MB:IMAGE]'
+            varType: string
+            variable_selector:
+            - sys
+            - query
+          id: image
+          logical_operator: and
+        - case_id: video
+          conditions:
+          - comparison_operator: contains
+            id: src-video
+            value: '[MB:VIDEO]'
+            varType: string
+            variable_selector:
+            - sys
+            - query
+          id: video
+          logical_operator: and
+        - case_id: document
+          conditions:
+          - comparison_operator: contains
+            id: src-document
+            value: '[MB:DOC]'
+            varType: string
+            variable_selector:
+            - sys
+            - query
+          id: document
+          logical_operator: and
+        - case_id: youtube
+          conditions:
+          - comparison_operator: contains
+            id: src-youtube
+            value: '[MB:YOUTUBE]'
+            varType: string
+            variable_selector:
+            - sys
+            - query
+          id: youtube
+          logical_operator: and
+        - case_id: url
+          conditions:
+          - comparison_operator: contains
+            id: src-url
+            value: '[MB:URL]'
+            varType: string
+            variable_selector:
+            - sys
+            - query
+          id: url
+          logical_operator: and
+        desc: MemoBrain Shareが付けた[MB:*]マーカーで入力種別を判定
+        selected: false
+        title: 共有種別判定
+        type: if-else
+      height: 230
+      id: source_router
+      position:
+        x: 600
+        y: 80
+      positionAbsolute:
+        x: 600
+        y: 80
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 260
+    - data:
+        context:
+          enabled: false
+          variable_selector: []
+        desc: ''
+        memory:
+          query_prompt_template: '{{#sys.query#}}'
+          role_prefix:
+            assistant: ''
+            user: ''
+          window:
+            enabled: false
+            size: 10
+        model:
+          completion_params:
+            temperature: 0.1
+          mode: chat
+          name: gemini-3.6-flash
+          provider: langgenius/gemini/google
+        prompt_template:
+        - id: 画像解析-s
+          role: system
+          text: "共有されたスクリーンショット/写真を視覚解析してMemoBrainへ保存するJSONを作成してください。画像内文字も読み取り、画面エラー、製品名、設定値、日時、URLなど重要情報を落とさないでください。ユーザー追記があれば反映してください。source_type=image。必ずJSONオブジェクト1個だけ返してください。Markdownは禁止。\n{\n \"action\":\"add\",\n \"title\":\"短い日本語タイトル\",\n \"content\":\"保存する詳細内容\",\n \"query\":\"\",\n \"target\":\"\",\n \"memo_type\":\"memo|todo|idea|url|shopping|tech|work|schedule\",\n \"category\":\"短いカテゴリ\",\n \"tags\":\"カンマ区切り最大5個\",\n \"due_date\":\"期限または空文字\",\n \"update_instruction\":\"\",\n \"source_type\":\"text|image|video|youtube|web|document\",\n \"source_url\":\"元URLまたは空文字\",\n \"summary\":\"2〜5行の要約\",\n \"key_points\":\"重要点を箇条書き文字列\",\n \"todo\":\"内容から明確に発生するTODO。なければ空文字\"\n}"
+        - id: 画像解析-u
+          role: user
+          text: '共有情報: {{#sys.query#}}
+
+            共有ファイル: {{#sys.files#}}'
+        selected: false
+        title: 画像解析 [3.6 Flash]
+        type: llm
+        variables: []
+        vision:
+          configs:
+            detail: high
+            variable_selector:
+            - sys
+            - files
+          enabled: true
+        error_strategy: fail-branch
+      height: 125
+      id: image_llm
+      position:
+        x: 950
+        y: -220
+      positionAbsolute:
+        x: 950
+        y: -220
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 260
+    - data:
+        context:
+          enabled: false
+          variable_selector: []
+        desc: ''
+        memory:
+          query_prompt_template: '{{#sys.query#}}'
+          role_prefix:
+            assistant: ''
+            user: ''
+          window:
+            enabled: false
+            size: 10
+        model:
+          completion_params:
+            temperature: 0.1
+          mode: chat
+          name: gemini-3.6-flash
+          provider: langgenius/gemini/google
+        prompt_template:
+        - id: 動画フレーム解析-s
+          role: system
+          text: "共有された動画から抽出された時系列フレーム画像を解析してください。複数画像は動画の順番に並んだサンプルフレームです。映像から分かる操作、画面遷移、対象物、エラー等をまとめてください。音声内容は与えられていない限り推測しないでください。source_type=video。必ずJSONオブジェクト1個だけ返してください。Markdownは禁止。\n{\n \"action\":\"add\",\n \"title\":\"短い日本語タイトル\",\n \"content\":\"保存する詳細内容\",\n \"query\":\"\",\n \"target\":\"\",\n \"memo_type\":\"memo|todo|idea|url|shopping|tech|work|schedule\",\n \"category\":\"短いカテゴリ\",\n \"tags\":\"カンマ区切り最大5個\",\n \"due_date\":\"期限または空文字\",\n \"update_instruction\":\"\",\n \"source_type\":\"text|image|video|youtube|web|document\",\n \"source_url\":\"元URLまたは空文字\",\n \"summary\":\"2〜5行の要約\",\n \"key_points\":\"重要点を箇条書き文字列\",\n \"todo\":\"内容から明確に発生するTODO。なければ空文字\"\n}"
+        - id: 動画フレーム解析-u
+          role: user
+          text: '共有情報: {{#sys.query#}}
+
+            動画サンプルフレーム: {{#sys.files#}}'
+        selected: false
+        title: 動画フレーム解析 [3.6 Flash]
+        type: llm
+        variables: []
+        vision:
+          configs:
+            detail: high
+            variable_selector:
+            - sys
+            - files
+          enabled: true
+        error_strategy: fail-branch
+      height: 125
+      id: video_llm
+      position:
+        x: 950
+        y: 0
+      positionAbsolute:
+        x: 950
+        y: 0
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 260
+    - data:
+        is_array_file: true
+        selected: false
+        title: 文書/PDF本文抽出
+        type: document-extractor
+        variable_selector:
+        - sys
+        - files
+      height: 90
+      id: doc_extract
+      position:
+        x: 950
+        y: 220
+      positionAbsolute:
+        x: 950
+        y: 220
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 260
+    - data:
+        context:
+          enabled: false
+          variable_selector: []
+        desc: ''
+        memory:
+          query_prompt_template: '{{#sys.query#}}'
+          role_prefix:
+            assistant: ''
+            user: ''
+          window:
+            enabled: false
+            size: 10
+        model:
+          completion_params:
+            temperature: 0.1
+          mode: chat
+          name: gemini-3.6-flash
+          provider: langgenius/gemini/google
+        prompt_template:
+        - id: 文書解析-s
+          role: system
+          text: "PDFや文書から抽出された本文をMemoBrain用に整理してください。内容、結論、重要点、固有名詞、数値、URLを保持してください。source_type=document。必ずJSONオブジェクト1個だけ返してください。Markdownは禁止。\n{\n \"action\":\"add\",\n \"title\":\"短い日本語タイトル\",\n \"content\":\"保存する詳細内容\",\n \"query\":\"\",\n \"target\":\"\",\n \"memo_type\":\"memo|todo|idea|url|shopping|tech|work|schedule\",\n \"category\":\"短いカテゴリ\",\n \"tags\":\"カンマ区切り最大5個\",\n \"due_date\":\"期限または空文字\",\n \"update_instruction\":\"\",\n \"source_type\":\"text|image|video|youtube|web|document\",\n \"source_url\":\"元URLまたは空文字\",\n \"summary\":\"2〜5行の要約\",\n \"key_points\":\"重要点を箇条書き文字列\",\n \"todo\":\"内容から明確に発生するTODO。なければ空文字\"\n}"
+        - id: 文書解析-u
+          role: user
+          text: '共有情報: {{#sys.query#}}
+
+            抽出本文（最大120000文字）:
+
+            {{#doc_limit.text#}}
+
+            切り詰め: {{#doc_limit.truncated#}}'
+        selected: false
+        title: 文書解析 [3.6 Flash]
+        type: llm
+        variables: []
+        vision:
+          enabled: false
+        error_strategy: fail-branch
+      height: 125
+      id: doc_llm
+      position:
+        x: 1610
+        y: 220
+      positionAbsolute:
+        x: 1610
+        y: 220
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 260
+    - data:
+        code: "import re\n\ndef main(query: str) -> dict:\n    q = query or \"\"\n    m = re.search(r\"https?://[^\\s<>]+\", q)\n    u = m.group(0).rstrip('.,);]}>\"') if m else \"\"\n    return {\"url\": u}\n"
+        code_language: python3
+        outputs:
+          url:
+            children: null
+            type: string
+        selected: false
+        title: URL抽出
+        type: code
+        variables:
+        - value_selector:
+          - sys
+          - query
+          variable: query
+      height: 90
+      id: url_extract
+      position:
+        x: 950
+        y: 440
+      positionAbsolute:
+        x: 950
+        y: 440
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 260
+    - data:
+        authorization:
+          config: null
+          type: no-auth
+        body:
+          data: []
+          type: none
+        desc: 生HTMLではなくJina ReaderのLLM向け本文を取得。巨大HTMLによる1MB超過を回避。
+        headers: 'Accept: application/json
+
+          X-Timeout: 20
+
+          X-Token-Budget: 30000'
+        method: get
+        params: ''
+        retry_config:
+          max_retries: 2
+          retry_enabled: true
+          retry_interval: 1000
+        selected: false
+        ssl_verify: true
+        timeout:
+          max_connect_timeout: 15
+          max_read_timeout: 45
+          max_write_timeout: 30
+        title: Web本文取得（Jina Reader）
+        type: http-request
+        url: https://r.jina.ai/{{#url_extract.url#}}
+        variables: []
+      height: 125
+      id: url_http
+      position:
+        x: 1280
+        y: 440
+      positionAbsolute:
+        x: 1280
+        y: 440
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 260
+    - data:
+        code: "import json\nimport re\n\ndef main(body: str) -> dict:\n    raw = body or \"\"\n    title = \"\"\n    text = \"\"\n    try:\n        obj = json.loads(raw)\n        data = obj.get(\"data\", obj) if isinstance(obj, dict) else {}\n        if isinstance(data, dict):\n            title = str(data.get(\"title\") or \"\")\n            text = str(data.get(\"content\") or data.get(\"text\") or data.get(\"markdown\") or \"\")\n    except Exception:\n        text = raw\n    if not text:\n        text = raw\n    # 念のためLLM投入前にも上限を設ける。\n    limit = 60000\n    truncated = len(text) > limit\n    text = text[:limit]\n    if truncated:\n        text += \"\\n[MemoBrain: Web本文が長いため先頭60000文字まで解析]\"\n    return {\"title\": title[:500], \"text\": text, \"truncated\": \"true\" if truncated else \"false\"}\n"
+        code_language: python3
+        outputs:
+          title:
+            children: null
+            type: string
+          text:
+            children: null
+            type: string
+          truncated:
+            children: null
+            type: string
+        selected: false
+        title: Web本文整形・サイズ制限
+        type: code
+        variables:
+        - value_selector:
+          - url_http
+          - body
+          variable: body
+      height: 95
+      id: url_clean
+      position:
+        x: 1610
+        y: 440
+      positionAbsolute:
+        x: 1610
+        y: 440
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 260
+    - data:
+        context:
+          enabled: false
+          variable_selector: []
+        desc: ''
+        memory:
+          query_prompt_template: '{{#sys.query#}}'
+          role_prefix:
+            assistant: ''
+            user: ''
+          window:
+            enabled: false
+            size: 10
+        model:
+          completion_params:
+            temperature: 0.1
+          mode: chat
+          name: gemini-3.6-flash
+          provider: langgenius/gemini/google
+        prompt_template:
+        - id: Webページ解析-s
+          role: system
+          text: "共有されたWebページをMemoBrain用メモに整理してください。広告やナビゲーションより本文を優先してください。source_type=web、source_urlは共有URL。必ずJSONオブジェクト1個だけ返してください。Markdownは禁止。\n{\n \"action\":\"add\",\n \"title\":\"短い日本語タイトル\",\n \"content\":\"保存する詳細内容\",\n \"query\":\"\",\n \"target\":\"\",\n \"memo_type\":\"memo|todo|idea|url|shopping|tech|work|schedule\",\n \"category\":\"短いカテゴリ\",\n \"tags\":\"カンマ区切り最大5個\",\n \"due_date\":\"期限または空文字\",\n \"update_instruction\":\"\",\n \"source_type\":\"text|image|video|youtube|web|document\",\n \"source_url\":\"元URLまたは空文字\",\n \"summary\":\"2〜5行の要約\",\n \"key_points\":\"重要点を箇条書き文字列\",\n \"todo\":\"内容から明確に発生するTODO。なければ空文字\"\n}"
+        - id: Webページ解析-u
+          role: user
+          text: 'URL: {{#url_extract.url#}}
+
+            ページタイトル: {{#url_clean.title#}}
+
+            本文（最大60000文字）:
+
+            {{#url_clean.text#}}
+
+            切り詰め: {{#url_clean.truncated#}}'
+        selected: false
+        title: Webページ解析 [3.6 Flash]
+        type: llm
+        variables: []
+        vision:
+          enabled: false
+        error_strategy: fail-branch
+      height: 125
+      id: url_llm
+      position:
+        x: 1940
+        y: 440
+      positionAbsolute:
+        x: 1940
+        y: 440
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 260
+    - data:
+        code: "import re\n\ndef main(query: str) -> dict:\n    q = query or \"\"\n    u = \"\"\n    vid = \"\"\n    m = re.search(r\"https?://[^\\s<>]+\", q)\n    if m:\n        u = m.group(0).rstrip(\".,);]}>\")\n    pats = [\n        r\"youtu\\.be/([A-Za-z0-9_-]{6,})\",\n        r\"[?&]v=([A-Za-z0-9_-]{6,})\",\n        r\"youtube\\.com/shorts/([A-Za-z0-9_-]{6,})\",\n    ]\n    for pat in pats:\n        m2 = re.search(pat, u)\n        if m2:\n            vid = m2.group(1)\n            break\n    return {\"url\": u, \"video_id\": vid}\n"
+        code_language: python3
+        outputs:
+          url:
+            children: null
+            type: string
+          video_id:
+            children: null
+            type: string
+        selected: false
+        title: YouTube ID抽出
+        type: code
+        variables:
+        - value_selector:
+          - sys
+          - query
+          variable: query
+      height: 95
+      id: yt_extract
+      position:
+        x: 950
+        y: 680
+      positionAbsolute:
+        x: 950
+        y: 680
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 260
+    - data:
+        context:
+          enabled: false
+          variable_selector: []
+        desc: ''
+        memory:
+          query_prompt_template: '{{#sys.query#}}'
+          role_prefix:
+            assistant: ''
+            user: ''
+          window:
+            enabled: false
+            size: 10
+        model:
+          completion_params:
+            temperature: 0.1
+          mode: chat
+          name: gemini-3.6-flash
+          provider: langgenius/gemini/google
+        prompt_template:
+        - id: YouTube解析-s
+          role: system
+          text: "YouTube共有をMemoBrain用に整理してください。字幕は公式Transcriptプラグインの取得結果です。字幕が空、または「Error processing request:」で始まる場合は動画内容を捏造せず、URLと「字幕取得不可」を保存してください。字幕があれば要約、重要点、固有名詞、実用的なTODO候補を抽出してください。source_type=youtube、source_urlには入力されたYouTube URLを一字も省略せず必ず設定してください。contentにも最後に「動画URL: <URL>」を残してください。必ずJSONオブジェクト1個だけ返してください。Markdownは禁止。\n{\n \"action\":\"add\",\n \"title\":\"短い日本語タイトル\",\n \"content\":\"保存する詳細内容\",\n \"query\":\"\",\n \"target\":\"\",\n \"memo_type\":\"memo|todo|idea|url|shopping|tech|work|schedule\",\n \"category\":\"短いカテゴリ\",\n \"tags\":\"カンマ区切り最大5個\",\n \"due_date\":\"期限または空文字\",\n \"update_instruction\":\"\",\n \"source_type\":\"text|image|video|youtube|web|document\",\n \"source_url\":\"元URLまたは空文字\",\n \"summary\":\"2〜5行の要約\",\n \"key_points\":\"重要点を箇条書き文字列\",\n \"todo\":\"内容から明確に発生するTODO。なければ空文字\"\n}"
+        - id: YouTube解析-u
+          role: user
+          text: 'URL: {{#yt_extract.url#}}
+
+            字幕（最大80000文字）:
+
+            {{#yt_limit.transcript#}}
+
+            切り詰め: {{#yt_limit.truncated#}}'
+        selected: false
+        title: YouTube解析 [3.6 Flash]
+        type: llm
+        variables: []
+        vision:
+          enabled: false
+        error_strategy: fail-branch
+      height: 125
+      id: yt_llm
+      position:
+        x: 1940
+        y: 680
+      positionAbsolute:
+        x: 1940
+        y: 680
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 260
+    - data:
+        output_type: string
+        selected: false
+        title: 解析結果統合
+        type: variable-aggregator
+        variables:
+        - - image_llm_result
+          - output
+        - - video_llm_result
+          - output
+        - - doc_llm_result
+          - output
+        - - url_llm_result
+          - output
+        - - yt_llm_result
+          - output
+        - - intent_llm_result
+          - output
+      height: 120
+      id: analysis_agg
+      position:
+        x: 2950
+        y: 140
+      positionAbsolute:
+        x: 2950
+        y: 140
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 260
+    - data:
+        desc: YouTubeページHTMLを取得せず、langgenius/transcriptで字幕を直接取得。1MB超過対策。
+        is_team_authorization: true
+        paramSchemas:
+        - auto_generate: null
+          default: null
+          form: llm
+          human_description:
+            en_US: Used to define the video from which the transcript will be fetched. You can provide a YouTube video ID or URL.
+            ja_JP: 字幕を取得するYouTube動画IDまたはURL。
+            zh_Hans: 用于定义要获取字幕的 YouTube 视频 ID 或 URL。
+          label:
+            en_US: Video ID/URL
+            ja_JP: 動画ID/URL
+            zh_Hans: 视频ID/URL
+          llm_description: YouTube video ID or URL.
+          max: null
+          min: null
+          name: video_id
+          options: []
+          placeholder: null
+          precision: null
+          required: true
+          scope: null
+          template: null
+          type: string
+        - auto_generate: null
+          default: null
+          form: form
+          human_description:
+            en_US: Language code(s) for transcript.
+            ja_JP: 字幕言語コード。カンマ区切り可。
+            zh_Hans: 字幕语言代码。
+          label:
+            en_US: Language Code
+            ja_JP: 言語
+            zh_Hans: 语言
+          llm_description: Language code(s), comma-separated.
+          max: null
+          min: null
+          name: language
+          options: []
+          placeholder: null
+          precision: null
+          required: false
+          scope: null
+          template: null
+          type: string
+        - auto_generate: null
+          default: text
+          form: form
+          human_description:
+            en_US: Transcript output format.
+            ja_JP: 字幕出力形式。
+            zh_Hans: 字幕输出格式。
+          label:
+            en_US: Output Format
+            ja_JP: 出力形式
+            zh_Hans: 输出格式
+          llm_description: Transcript output format.
+          max: null
+          min: null
+          name: format
+          options:
+          - label:
+              en_US: Plain Text
+              ja_JP: プレーンテキスト
+              zh_Hans: 纯文本
+            value: text
+          - label:
+              en_US: JSON Format
+              ja_JP: JSON
+              zh_Hans: JSON
+            value: json
+          - label:
+              en_US: Pretty Print Format
+              ja_JP: 整形表示
+              zh_Hans: 美化格式
+            value: pretty
+          - label:
+              en_US: SRT Format
+              ja_JP: SRT
+              zh_Hans: SRT
+            value: srt
+          - label:
+              en_US: WebVTT Format
+              ja_JP: WebVTT
+              zh_Hans: WebVTT
+            value: vtt
+          placeholder: null
+          precision: null
+          required: false
+          scope: null
+          template: null
+          type: select
+        - auto_generate: null
+          default: false
+          form: form
+          human_description:
+            en_US: Preserve HTML formatting.
+            ja_JP: HTML書式を保持するか。
+            zh_Hans: 是否保留HTML格式。
+          label:
+            en_US: Preserve Formatting
+            ja_JP: 書式保持
+            zh_Hans: 保留格式
+          llm_description: Whether to preserve HTML formatting.
+          max: null
+          min: null
+          name: preserve_formatting
+          options: []
+          placeholder: null
+          precision: null
+          required: false
+          scope: null
+          template: null
+          type: boolean
+        - auto_generate: null
+          default: null
+          form: form
+          human_description:
+            en_US: Optional HTTPS proxy URL.
+            ja_JP: 任意のHTTPSプロキシURL。
+            zh_Hans: 可选HTTPS代理地址。
+          label:
+            en_US: HTTPS Proxy
+            ja_JP: HTTPSプロキシ
+            zh_Hans: HTTPS代理
+          llm_description: Optional HTTPS proxy URL.
+          max: null
+          min: null
+          name: proxy
+          options: []
+          placeholder: null
+          precision: null
+          required: false
+          scope: null
+          template: null
+          type: string
+        - auto_generate: null
+          default: null
+          form: form
+          human_description:
+            en_US: Optional cookies.txt path for restricted videos.
+            ja_JP: 制限動画用cookies.txtパス（任意）。
+            zh_Hans: 受限视频用cookies.txt路径（可选）。
+          label:
+            en_US: Cookies File Path
+            ja_JP: Cookiesファイル
+            zh_Hans: Cookies文件路径
+          llm_description: Optional cookies.txt file path.
+          max: null
+          min: null
+          name: cookies
+          options: []
+          placeholder: null
+          precision: null
+          required: false
+          scope: null
+          template: null
+          type: string
+        params:
+          video_id: ''
+          language: ''
+          format: ''
+          preserve_formatting: ''
+          proxy: ''
+          cookies: ''
+        plugin_id: langgenius/transcript
+        provider_id: langgenius/transcript/transcript
+        provider_name: langgenius/transcript/transcript
+        provider_type: builtin
+        retry_config:
+          max_retries: 2
+          retry_enabled: true
+          retry_interval: 1000
+        selected: false
+        title: YouTube字幕取得（Transcript）
+        tool_configurations:
+          language:
+            type: mixed
+            value: ja,en
+          format:
+            type: constant
+            value: text
+          preserve_formatting:
+            type: constant
+            value: false
+          proxy:
+            type: mixed
+            value: ''
+          cookies:
+            type: mixed
+            value: ''
+        tool_description: Get transcript from a YouTube video for free.
+        tool_label: Free YouTube Transcript API
+        tool_name: free_youtube_transcript
+        tool_node_version: '2'
+        tool_parameters:
+          video_id:
+            type: variable
+            value:
+            - yt_extract
+            - video_id
+        type: tool
+      height: 220
+      id: yt_transcript
+      position:
+        x: 1280
+        y: 680
+      positionAbsolute:
+        x: 1280
+        y: 680
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 260
+    - data:
+        code: "def main(text: str) -> dict:\n    s = (text or \"\").strip()\n    # Dify変数/LLM入力の肥大化を避ける。通常の字幕は十分収まる。\n    limit = 80000\n    truncated = len(s) > limit\n    if truncated:\n        s = s[:limit] + \"\\n[MemoBrain: 字幕が長いため先頭80000文字まで保存対象にしました]\"\n    return {\"transcript\": s, \"truncated\": \"true\" if truncated else \"false\"}\n"
+        code_language: python3
+        outputs:
+          transcript:
+            children: null
+            type: string
+          truncated:
+            children: null
+            type: string
+        selected: false
+        title: 字幕サイズ制限
+        type: code
+        variables:
+        - value_selector:
+          - yt_transcript
+          - text
+          variable: text
+      height: 90
+      id: yt_limit
+      position:
+        x: 1610
+        y: 680
+      positionAbsolute:
+        x: 1610
+        y: 680
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 260
+    - data:
+        code: "def main(text) -> dict:\n    # Document Extractorが配列を返す構成にも対応。\n    if isinstance(text, list):\n        s = \"\\n\\n\".join(str(x) for x in text)\n    else:\n        s = str(text or \"\")\n    limit = 120000\n    truncated = len(s) > limit\n    s = s[:limit]\n    if truncated:\n        s += \"\\n[MemoBrain: 文書本文が長いため先頭120000文字まで解析]\"\n    return {\"text\": s, \"truncated\": \"true\" if truncated else \"false\"}\n"
+        code_language: python3
+        outputs:
+          text:
+            children: null
+            type: string
+          truncated:
+            children: null
+            type: string
+        selected: false
+        title: 文書サイズ制限
+        type: code
+        variables:
+        - value_selector:
+          - doc_extract
+          - text
+          variable: text
+      height: 90
+      id: doc_limit
+      position:
+        x: 1280
+        y: 220
+      positionAbsolute:
+        x: 1280
+        y: 220
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 260
+    - data:
+        context:
+          enabled: false
+          variable_selector: []
+        desc: ''
+        memory:
+          query_prompt_template: '{{#sys.query#}}'
+          role_prefix:
+            assistant: ''
+            user: ''
+          window:
+            enabled: false
+            size: 10
+        model:
+          completion_params:
+            temperature: 0.1
+          mode: chat
+          name: gemini-3.5-flash
+          provider: langgenius/gemini/google
+        prompt_template:
+        - id: pi1
+          role: system
+          text: "あなたは個人用メモアプリ MemoBrain の意図解析器です。\nユーザー入力を必ずJSONオブジェクト1個だけで返してください。Markdownや説明は禁止です。\naction は add, search, list, delete, complete, update, favorite, help のいずれか。\n普通のメモ/アイデア/URL/買い物/TODOを残す→add、過去メモを探す/質問→search、最近のメモ/一般的な一覧→list、\n保存した動画一覧/YouTube一覧/動画URL一覧/動画を見せて→search（queryには「youtube 動画 URL」とユーザー指定の検索語を含める）、\n削除→delete、TODO完了→complete、追記/修正→update、お気に入り登録/解除→favorite、使い方→help。迷ったらadd。\nJSON:\n{\"action\":\"add\",\"title\":\"短い日本語タイトル\",\"content\":\"保存する元内容\",\"query\":\"検索用語\",\"target\":\"対象メモ特定語\",\n\"memo_type\":\"memo|todo|idea|url|shopping|tech|work|schedule\",\"category\":\"短いカテゴリ\",\"tags\":\"カンマ区切り最大5個\",\n\"due_date\":\"明示期限または空文字\",\"update_instruction\":\"更新等の具体的指示または空文字\"}\naddでは情報を落とさずcontentに保持し、title/category/tagsを生成する。管理操作ではtargetを具体化する。\n追加で source_type=text, source_url=\"\", summary, key_points, todo も出力してください。\n必ずJSONオブジェクト1個だけ返してください。Markdownは禁止。\n{\n \"action\":\"add\",\n \"title\":\"短い日本語タイトル\",\n \"content\":\"保存する詳細内容\",\n \"query\":\"\",\n \"\
+            target\":\"\",\n \"memo_type\":\"memo|todo|idea|url|shopping|tech|work|schedule\",\n \"category\":\"短いカテゴリ\",\n \"tags\":\"カンマ区切り最大5個\",\n \"due_date\":\"期限または空文字\",\n \"update_instruction\":\"\",\n \"source_type\":\"text|image|video|youtube|web|document\",\n \"source_url\":\"元URLまたは空文字\",\n \"summary\":\"2〜5行の要約\",\n \"key_points\":\"重要点を箇条書き文字列\",\n \"todo\":\"内容から明確に発生するTODO。なければ空文字\"\n}"
+        - id: pi2
+          role: user
+          text: '{{#sys.query#}}'
+        selected: false
+        title: 意図解析 [3.5 Flash fallback]
+        type: llm
+        variables: []
+        vision:
+          enabled: false
+        error_strategy: fail-branch
+      height: 120
+      id: intent_llm_35
+      position:
+        x: 900
+        y: 410
+      positionAbsolute:
+        x: 900
+        y: 410
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 260
+    - data:
+        context:
+          enabled: false
+          variable_selector: []
+        desc: ''
+        memory:
+          query_prompt_template: '{{#sys.query#}}'
+          role_prefix:
+            assistant: ''
+            user: ''
+          window:
+            enabled: false
+            size: 10
+        model:
+          completion_params:
+            temperature: 0.1
+          mode: chat
+          name: gemini-2.5-flash
+          provider: langgenius/gemini/google
+        prompt_template:
+        - id: pi1
+          role: system
+          text: "あなたは個人用メモアプリ MemoBrain の意図解析器です。\nユーザー入力を必ずJSONオブジェクト1個だけで返してください。Markdownや説明は禁止です。\naction は add, search, list, delete, complete, update, favorite, help のいずれか。\n普通のメモ/アイデア/URL/買い物/TODOを残す→add、過去メモを探す/質問→search、最近のメモ/一般的な一覧→list、\n保存した動画一覧/YouTube一覧/動画URL一覧/動画を見せて→search（queryには「youtube 動画 URL」とユーザー指定の検索語を含める）、\n削除→delete、TODO完了→complete、追記/修正→update、お気に入り登録/解除→favorite、使い方→help。迷ったらadd。\nJSON:\n{\"action\":\"add\",\"title\":\"短い日本語タイトル\",\"content\":\"保存する元内容\",\"query\":\"検索用語\",\"target\":\"対象メモ特定語\",\n\"memo_type\":\"memo|todo|idea|url|shopping|tech|work|schedule\",\"category\":\"短いカテゴリ\",\"tags\":\"カンマ区切り最大5個\",\n\"due_date\":\"明示期限または空文字\",\"update_instruction\":\"更新等の具体的指示または空文字\"}\naddでは情報を落とさずcontentに保持し、title/category/tagsを生成する。管理操作ではtargetを具体化する。\n追加で source_type=text, source_url=\"\", summary, key_points, todo も出力してください。\n必ずJSONオブジェクト1個だけ返してください。Markdownは禁止。\n{\n \"action\":\"add\",\n \"title\":\"短い日本語タイトル\",\n \"content\":\"保存する詳細内容\",\n \"query\":\"\",\n \"\
+            target\":\"\",\n \"memo_type\":\"memo|todo|idea|url|shopping|tech|work|schedule\",\n \"category\":\"短いカテゴリ\",\n \"tags\":\"カンマ区切り最大5個\",\n \"due_date\":\"期限または空文字\",\n \"update_instruction\":\"\",\n \"source_type\":\"text|image|video|youtube|web|document\",\n \"source_url\":\"元URLまたは空文字\",\n \"summary\":\"2〜5行の要約\",\n \"key_points\":\"重要点を箇条書き文字列\",\n \"todo\":\"内容から明確に発生するTODO。なければ空文字\"\n}"
+        - id: pi2
+          role: user
+          text: '{{#sys.query#}}'
+        selected: false
+        title: 意図解析 [2.5 Flash fallback]
+        type: llm
+        variables: []
+        vision:
+          enabled: false
+      height: 120
+      id: intent_llm_25
+      position:
+        x: 1200
+        y: 410
+      positionAbsolute:
+        x: 1200
+        y: 410
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 260
+    - data:
+        advanced_settings: null
+        desc: 成功したGeminiモデルの出力を既存フローへ渡す
+        output_type: string
+        selected: false
+        title: 意図解析 モデル出力
+        type: variable-aggregator
+        variables:
+        - - intent_llm
+          - text
+        - - intent_llm_35
+          - text
+        - - intent_llm_25
+          - text
+      height: 120
+      id: intent_llm_result
+      position:
+        x: 1500
+        y: 410
+      positionAbsolute:
+        x: 1500
+        y: 410
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 260
+    - data:
+        context:
+          enabled: false
+          variable_selector: []
+        desc: Web検索結果から出典付き記事を作成
+        memory:
+          query_prompt_template: '{{#sys.query#}}'
+          role_prefix:
+            assistant: ''
+            user: ''
+          window:
+            enabled: false
+            size: 10
+        model:
+          completion_params:
+            temperature: 0.2
+          mode: chat
+          name: gemini-3.5-flash
+          provider: langgenius/gemini/google
+        prompt_template:
+        - id: web-article-system
+          role: system
+          text: 'あなたはMemoBrainの調査記事作成係です。
+
+            Knowledgeに十分な情報がなかったため、DuckDuckGo検索結果だけを根拠に日本語の記事を作成してください。
+
+
+            必須ルール:
+
+            - 先頭は「# タイトル」
+
+            - 続けて要約、本文、重要ポイント、注意点を整理
+
+            - 末尾に「## 出典」を設け、検索結果に実在するURLをMarkdownリンクで列挙
+
+            - URL、日付、固有名詞、数値を推測しない
+
+            - 情報が断片的または相互に矛盾する場合は、その限界を明記
+
+            - 検索結果に存在しない事実を追加しない
+
+            - そのままKnowledgeへ保存して再利用できる完成記事にする
+
+
+            質問:
+
+            {{#intent_parse.query#}}
+
+
+            DuckDuckGo検索結果:
+
+            {{#web_check.search_text#}}
+
+            '
+        selected: false
+        title: Web調査記事生成 [3.5 Flash fallback]
+        type: llm
+        variables: []
+        vision:
+          enabled: false
+        error_strategy: fail-branch
+      height: 150
+      id: web_article_llm_35
+      position:
+        x: 8740
+        y: 620
+      positionAbsolute:
+        x: 8740
+        y: 620
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 260
+    - data:
+        context:
+          enabled: false
+          variable_selector: []
+        desc: Web検索結果から出典付き記事を作成
+        memory:
+          query_prompt_template: '{{#sys.query#}}'
+          role_prefix:
+            assistant: ''
+            user: ''
+          window:
+            enabled: false
+            size: 10
+        model:
+          completion_params:
+            temperature: 0.2
+          mode: chat
+          name: gemini-2.5-flash
+          provider: langgenius/gemini/google
+        prompt_template:
+        - id: web-article-system
+          role: system
+          text: 'あなたはMemoBrainの調査記事作成係です。
+
+            Knowledgeに十分な情報がなかったため、DuckDuckGo検索結果だけを根拠に日本語の記事を作成してください。
+
+
+            必須ルール:
+
+            - 先頭は「# タイトル」
+
+            - 続けて要約、本文、重要ポイント、注意点を整理
+
+            - 末尾に「## 出典」を設け、検索結果に実在するURLをMarkdownリンクで列挙
+
+            - URL、日付、固有名詞、数値を推測しない
+
+            - 情報が断片的または相互に矛盾する場合は、その限界を明記
+
+            - 検索結果に存在しない事実を追加しない
+
+            - そのままKnowledgeへ保存して再利用できる完成記事にする
+
+
+            質問:
+
+            {{#intent_parse.query#}}
+
+
+            DuckDuckGo検索結果:
+
+            {{#web_check.search_text#}}
+
+            '
+        selected: false
+        title: Web調査記事生成 [2.5 Flash fallback]
+        type: llm
+        variables: []
+        vision:
+          enabled: false
+      height: 150
+      id: web_article_llm_25
+      position:
+        x: 9040
+        y: 620
+      positionAbsolute:
+        x: 9040
+        y: 620
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 260
+    - data:
+        advanced_settings: null
+        desc: 成功したGeminiモデルの出力を既存フローへ渡す
+        output_type: string
+        selected: false
+        title: Web調査記事生成 モデル出力
+        type: variable-aggregator
+        variables:
+        - - web_article_llm
+          - text
+        - - web_article_llm_35
+          - text
+        - - web_article_llm_25
+          - text
+      height: 120
+      id: web_article_llm_result
+      position:
+        x: 9340
+        y: 620
+      positionAbsolute:
+        x: 9340
+        y: 620
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 260
+    - data:
+        context:
+          enabled: false
+          variable_selector: []
+        desc: ''
+        memory:
+          query_prompt_template: '{{#sys.query#}}'
+          role_prefix:
+            assistant: ''
+            user: ''
+          window:
+            enabled: false
+            size: 10
+        model:
+          completion_params:
+            temperature: 0.2
+          mode: chat
+          name: gemini-3.5-flash
+          provider: langgenius/gemini/google
+        prompt_template:
+        - id: ps1
+          role: system
+          text: 'MemoBrainの検索回答係です。以下のKnowledge検索結果だけを根拠に日本語で答えてください。
+
+            各メモ内の source_url: または 動画URL: は重要な保存情報です。URLが存在する場合は省略・短縮・書き換えをせず、そのまま回答に含めてください。
+
+            ユーザーが「動画一覧」「YouTube一覧」「動画URL」「保存した動画」などを求めた場合は、該当する動画メモを番号付きで一覧化してください。 各項目は原則「タイトル — URL」の形式にし、必要なら次の行に短い要約を添えてください。 source_type が youtube または video のメモを優先し、URLが保存されているものは必ずURLを表示してください。 検索結果にURLがない場合はURLを推測・生成しないでください。
+
+            検索結果に質問へ直接答えられる根拠がない場合は、ほかの文を一切付けず `__MEMOBRAIN_WEB_SEARCH__` だけを出力してください。 根拠がある場合だけ通常回答を生成し、推測で補完しないでください。
+
+            質問: {{#intent_parse.query#}}
+
+            検索結果(JSON): {{#search_http.body#}}'
+        selected: false
+        title: 検索回答生成 [3.5 Flash fallback]
+        type: llm
+        variables: []
+        vision:
+          enabled: false
+        error_strategy: fail-branch
+      height: 120
+      id: search_llm_35
+      position:
+        x: 7100
+        y: 340
+      positionAbsolute:
+        x: 7100
+        y: 340
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 260
+    - data:
+        context:
+          enabled: false
+          variable_selector: []
+        desc: ''
+        memory:
+          query_prompt_template: '{{#sys.query#}}'
+          role_prefix:
+            assistant: ''
+            user: ''
+          window:
+            enabled: false
+            size: 10
+        model:
+          completion_params:
+            temperature: 0.2
+          mode: chat
+          name: gemini-2.5-flash
+          provider: langgenius/gemini/google
+        prompt_template:
+        - id: ps1
+          role: system
+          text: 'MemoBrainの検索回答係です。以下のKnowledge検索結果だけを根拠に日本語で答えてください。
+
+            各メモ内の source_url: または 動画URL: は重要な保存情報です。URLが存在する場合は省略・短縮・書き換えをせず、そのまま回答に含めてください。
+
+            ユーザーが「動画一覧」「YouTube一覧」「動画URL」「保存した動画」などを求めた場合は、該当する動画メモを番号付きで一覧化してください。 各項目は原則「タイトル — URL」の形式にし、必要なら次の行に短い要約を添えてください。 source_type が youtube または video のメモを優先し、URLが保存されているものは必ずURLを表示してください。 検索結果にURLがない場合はURLを推測・生成しないでください。
+
+            検索結果に質問へ直接答えられる根拠がない場合は、ほかの文を一切付けず `__MEMOBRAIN_WEB_SEARCH__` だけを出力してください。 根拠がある場合だけ通常回答を生成し、推測で補完しないでください。
+
+            質問: {{#intent_parse.query#}}
+
+            検索結果(JSON): {{#search_http.body#}}'
+        selected: false
+        title: 検索回答生成 [2.5 Flash fallback]
+        type: llm
+        variables: []
+        vision:
+          enabled: false
+      height: 120
+      id: search_llm_25
+      position:
+        x: 7400
+        y: 340
+      positionAbsolute:
+        x: 7400
+        y: 340
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 260
+    - data:
+        advanced_settings: null
+        desc: 成功したGeminiモデルの出力を既存フローへ渡す
+        output_type: string
+        selected: false
+        title: 検索回答生成 モデル出力
+        type: variable-aggregator
+        variables:
+        - - search_llm
+          - text
+        - - search_llm_35
+          - text
+        - - search_llm_25
+          - text
+      height: 120
+      id: search_llm_result
+      position:
+        x: 7700
+        y: 340
+      positionAbsolute:
+        x: 7700
+        y: 340
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 260
+    - data:
+        context:
+          enabled: false
+          variable_selector: []
+        desc: ''
+        memory:
+          query_prompt_template: '{{#sys.query#}}'
+          role_prefix:
+            assistant: ''
+            user: ''
+          window:
+            enabled: false
+            size: 10
+        model:
+          completion_params:
+            temperature: 0.1
+          mode: chat
+          name: gemini-3.5-flash
+          provider: langgenius/gemini/google
+        prompt_template:
+        - id: 画像解析-s
+          role: system
+          text: "共有されたスクリーンショット/写真を視覚解析してMemoBrainへ保存するJSONを作成してください。画像内文字も読み取り、画面エラー、製品名、設定値、日時、URLなど重要情報を落とさないでください。ユーザー追記があれば反映してください。source_type=image。必ずJSONオブジェクト1個だけ返してください。Markdownは禁止。\n{\n \"action\":\"add\",\n \"title\":\"短い日本語タイトル\",\n \"content\":\"保存する詳細内容\",\n \"query\":\"\",\n \"target\":\"\",\n \"memo_type\":\"memo|todo|idea|url|shopping|tech|work|schedule\",\n \"category\":\"短いカテゴリ\",\n \"tags\":\"カンマ区切り最大5個\",\n \"due_date\":\"期限または空文字\",\n \"update_instruction\":\"\",\n \"source_type\":\"text|image|video|youtube|web|document\",\n \"source_url\":\"元URLまたは空文字\",\n \"summary\":\"2〜5行の要約\",\n \"key_points\":\"重要点を箇条書き文字列\",\n \"todo\":\"内容から明確に発生するTODO。なければ空文字\"\n}"
+        - id: 画像解析-u
+          role: user
+          text: '共有情報: {{#sys.query#}}
+
+            共有ファイル: {{#sys.files#}}'
+        selected: false
+        title: 画像解析 [3.5 Flash fallback]
+        type: llm
+        variables: []
+        vision:
+          configs:
+            detail: high
+            variable_selector:
+            - sys
+            - files
+          enabled: true
+        error_strategy: fail-branch
+      height: 125
+      id: image_llm_35
+      position:
+        x: 1250
+        y: -30
+      positionAbsolute:
+        x: 1250
+        y: -30
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 260
+    - data:
+        context:
+          enabled: false
+          variable_selector: []
+        desc: ''
+        memory:
+          query_prompt_template: '{{#sys.query#}}'
+          role_prefix:
+            assistant: ''
+            user: ''
+          window:
+            enabled: false
+            size: 10
+        model:
+          completion_params:
+            temperature: 0.1
+          mode: chat
+          name: gemini-2.5-flash
+          provider: langgenius/gemini/google
+        prompt_template:
+        - id: 画像解析-s
+          role: system
+          text: "共有されたスクリーンショット/写真を視覚解析してMemoBrainへ保存するJSONを作成してください。画像内文字も読み取り、画面エラー、製品名、設定値、日時、URLなど重要情報を落とさないでください。ユーザー追記があれば反映してください。source_type=image。必ずJSONオブジェクト1個だけ返してください。Markdownは禁止。\n{\n \"action\":\"add\",\n \"title\":\"短い日本語タイトル\",\n \"content\":\"保存する詳細内容\",\n \"query\":\"\",\n \"target\":\"\",\n \"memo_type\":\"memo|todo|idea|url|shopping|tech|work|schedule\",\n \"category\":\"短いカテゴリ\",\n \"tags\":\"カンマ区切り最大5個\",\n \"due_date\":\"期限または空文字\",\n \"update_instruction\":\"\",\n \"source_type\":\"text|image|video|youtube|web|document\",\n \"source_url\":\"元URLまたは空文字\",\n \"summary\":\"2〜5行の要約\",\n \"key_points\":\"重要点を箇条書き文字列\",\n \"todo\":\"内容から明確に発生するTODO。なければ空文字\"\n}"
+        - id: 画像解析-u
+          role: user
+          text: '共有情報: {{#sys.query#}}
+
+            共有ファイル: {{#sys.files#}}'
+        selected: false
+        title: 画像解析 [2.5 Flash fallback]
+        type: llm
+        variables: []
+        vision:
+          configs:
+            detail: high
+            variable_selector:
+            - sys
+            - files
+          enabled: true
+      height: 125
+      id: image_llm_25
+      position:
+        x: 1550
+        y: -30
+      positionAbsolute:
+        x: 1550
+        y: -30
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 260
+    - data:
+        advanced_settings: null
+        desc: 成功したGeminiモデルの出力を既存フローへ渡す
+        output_type: string
+        selected: false
+        title: 画像解析 モデル出力
+        type: variable-aggregator
+        variables:
+        - - image_llm
+          - text
+        - - image_llm_35
+          - text
+        - - image_llm_25
+          - text
+      height: 120
+      id: image_llm_result
+      position:
+        x: 1850
+        y: -30
+      positionAbsolute:
+        x: 1850
+        y: -30
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 260
+    - data:
+        context:
+          enabled: false
+          variable_selector: []
+        desc: ''
+        memory:
+          query_prompt_template: '{{#sys.query#}}'
+          role_prefix:
+            assistant: ''
+            user: ''
+          window:
+            enabled: false
+            size: 10
+        model:
+          completion_params:
+            temperature: 0.1
+          mode: chat
+          name: gemini-3.5-flash
+          provider: langgenius/gemini/google
+        prompt_template:
+        - id: 動画フレーム解析-s
+          role: system
+          text: "共有された動画から抽出された時系列フレーム画像を解析してください。複数画像は動画の順番に並んだサンプルフレームです。映像から分かる操作、画面遷移、対象物、エラー等をまとめてください。音声内容は与えられていない限り推測しないでください。source_type=video。必ずJSONオブジェクト1個だけ返してください。Markdownは禁止。\n{\n \"action\":\"add\",\n \"title\":\"短い日本語タイトル\",\n \"content\":\"保存する詳細内容\",\n \"query\":\"\",\n \"target\":\"\",\n \"memo_type\":\"memo|todo|idea|url|shopping|tech|work|schedule\",\n \"category\":\"短いカテゴリ\",\n \"tags\":\"カンマ区切り最大5個\",\n \"due_date\":\"期限または空文字\",\n \"update_instruction\":\"\",\n \"source_type\":\"text|image|video|youtube|web|document\",\n \"source_url\":\"元URLまたは空文字\",\n \"summary\":\"2〜5行の要約\",\n \"key_points\":\"重要点を箇条書き文字列\",\n \"todo\":\"内容から明確に発生するTODO。なければ空文字\"\n}"
+        - id: 動画フレーム解析-u
+          role: user
+          text: '共有情報: {{#sys.query#}}
+
+            動画サンプルフレーム: {{#sys.files#}}'
+        selected: false
+        title: 動画フレーム解析 [3.5 Flash fallback]
+        type: llm
+        variables: []
+        vision:
+          configs:
+            detail: high
+            variable_selector:
+            - sys
+            - files
+          enabled: true
+        error_strategy: fail-branch
+      height: 125
+      id: video_llm_35
+      position:
+        x: 1250
+        y: 190
+      positionAbsolute:
+        x: 1250
+        y: 190
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 260
+    - data:
+        context:
+          enabled: false
+          variable_selector: []
+        desc: ''
+        memory:
+          query_prompt_template: '{{#sys.query#}}'
+          role_prefix:
+            assistant: ''
+            user: ''
+          window:
+            enabled: false
+            size: 10
+        model:
+          completion_params:
+            temperature: 0.1
+          mode: chat
+          name: gemini-2.5-flash
+          provider: langgenius/gemini/google
+        prompt_template:
+        - id: 動画フレーム解析-s
+          role: system
+          text: "共有された動画から抽出された時系列フレーム画像を解析してください。複数画像は動画の順番に並んだサンプルフレームです。映像から分かる操作、画面遷移、対象物、エラー等をまとめてください。音声内容は与えられていない限り推測しないでください。source_type=video。必ずJSONオブジェクト1個だけ返してください。Markdownは禁止。\n{\n \"action\":\"add\",\n \"title\":\"短い日本語タイトル\",\n \"content\":\"保存する詳細内容\",\n \"query\":\"\",\n \"target\":\"\",\n \"memo_type\":\"memo|todo|idea|url|shopping|tech|work|schedule\",\n \"category\":\"短いカテゴリ\",\n \"tags\":\"カンマ区切り最大5個\",\n \"due_date\":\"期限または空文字\",\n \"update_instruction\":\"\",\n \"source_type\":\"text|image|video|youtube|web|document\",\n \"source_url\":\"元URLまたは空文字\",\n \"summary\":\"2〜5行の要約\",\n \"key_points\":\"重要点を箇条書き文字列\",\n \"todo\":\"内容から明確に発生するTODO。なければ空文字\"\n}"
+        - id: 動画フレーム解析-u
+          role: user
+          text: '共有情報: {{#sys.query#}}
+
+            動画サンプルフレーム: {{#sys.files#}}'
+        selected: false
+        title: 動画フレーム解析 [2.5 Flash fallback]
+        type: llm
+        variables: []
+        vision:
+          configs:
+            detail: high
+            variable_selector:
+            - sys
+            - files
+          enabled: true
+      height: 125
+      id: video_llm_25
+      position:
+        x: 1550
+        y: 190
+      positionAbsolute:
+        x: 1550
+        y: 190
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 260
+    - data:
+        advanced_settings: null
+        desc: 成功したGeminiモデルの出力を既存フローへ渡す
+        output_type: string
+        selected: false
+        title: 動画フレーム解析 モデル出力
+        type: variable-aggregator
+        variables:
+        - - video_llm
+          - text
+        - - video_llm_35
+          - text
+        - - video_llm_25
+          - text
+      height: 120
+      id: video_llm_result
+      position:
+        x: 1850
+        y: 190
+      positionAbsolute:
+        x: 1850
+        y: 190
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 260
+    - data:
+        context:
+          enabled: false
+          variable_selector: []
+        desc: ''
+        memory:
+          query_prompt_template: '{{#sys.query#}}'
+          role_prefix:
+            assistant: ''
+            user: ''
+          window:
+            enabled: false
+            size: 10
+        model:
+          completion_params:
+            temperature: 0.1
+          mode: chat
+          name: gemini-3.5-flash
+          provider: langgenius/gemini/google
+        prompt_template:
+        - id: 文書解析-s
+          role: system
+          text: "PDFや文書から抽出された本文をMemoBrain用に整理してください。内容、結論、重要点、固有名詞、数値、URLを保持してください。source_type=document。必ずJSONオブジェクト1個だけ返してください。Markdownは禁止。\n{\n \"action\":\"add\",\n \"title\":\"短い日本語タイトル\",\n \"content\":\"保存する詳細内容\",\n \"query\":\"\",\n \"target\":\"\",\n \"memo_type\":\"memo|todo|idea|url|shopping|tech|work|schedule\",\n \"category\":\"短いカテゴリ\",\n \"tags\":\"カンマ区切り最大5個\",\n \"due_date\":\"期限または空文字\",\n \"update_instruction\":\"\",\n \"source_type\":\"text|image|video|youtube|web|document\",\n \"source_url\":\"元URLまたは空文字\",\n \"summary\":\"2〜5行の要約\",\n \"key_points\":\"重要点を箇条書き文字列\",\n \"todo\":\"内容から明確に発生するTODO。なければ空文字\"\n}"
+        - id: 文書解析-u
+          role: user
+          text: '共有情報: {{#sys.query#}}
+
+            抽出本文（最大120000文字）:
+
+            {{#doc_limit.text#}}
+
+            切り詰め: {{#doc_limit.truncated#}}'
+        selected: false
+        title: 文書解析 [3.5 Flash fallback]
+        type: llm
+        variables: []
+        vision:
+          enabled: false
+        error_strategy: fail-branch
+      height: 125
+      id: doc_llm_35
+      position:
+        x: 1910
+        y: 410
+      positionAbsolute:
+        x: 1910
+        y: 410
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 260
+    - data:
+        context:
+          enabled: false
+          variable_selector: []
+        desc: ''
+        memory:
+          query_prompt_template: '{{#sys.query#}}'
+          role_prefix:
+            assistant: ''
+            user: ''
+          window:
+            enabled: false
+            size: 10
+        model:
+          completion_params:
+            temperature: 0.1
+          mode: chat
+          name: gemini-2.5-flash
+          provider: langgenius/gemini/google
+        prompt_template:
+        - id: 文書解析-s
+          role: system
+          text: "PDFや文書から抽出された本文をMemoBrain用に整理してください。内容、結論、重要点、固有名詞、数値、URLを保持してください。source_type=document。必ずJSONオブジェクト1個だけ返してください。Markdownは禁止。\n{\n \"action\":\"add\",\n \"title\":\"短い日本語タイトル\",\n \"content\":\"保存する詳細内容\",\n \"query\":\"\",\n \"target\":\"\",\n \"memo_type\":\"memo|todo|idea|url|shopping|tech|work|schedule\",\n \"category\":\"短いカテゴリ\",\n \"tags\":\"カンマ区切り最大5個\",\n \"due_date\":\"期限または空文字\",\n \"update_instruction\":\"\",\n \"source_type\":\"text|image|video|youtube|web|document\",\n \"source_url\":\"元URLまたは空文字\",\n \"summary\":\"2〜5行の要約\",\n \"key_points\":\"重要点を箇条書き文字列\",\n \"todo\":\"内容から明確に発生するTODO。なければ空文字\"\n}"
+        - id: 文書解析-u
+          role: user
+          text: '共有情報: {{#sys.query#}}
+
+            抽出本文（最大120000文字）:
+
+            {{#doc_limit.text#}}
+
+            切り詰め: {{#doc_limit.truncated#}}'
+        selected: false
+        title: 文書解析 [2.5 Flash fallback]
+        type: llm
+        variables: []
+        vision:
+          enabled: false
+      height: 125
+      id: doc_llm_25
+      position:
+        x: 2210
+        y: 410
+      positionAbsolute:
+        x: 2210
+        y: 410
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 260
+    - data:
+        advanced_settings: null
+        desc: 成功したGeminiモデルの出力を既存フローへ渡す
+        output_type: string
+        selected: false
+        title: 文書解析 モデル出力
+        type: variable-aggregator
+        variables:
+        - - doc_llm
+          - text
+        - - doc_llm_35
+          - text
+        - - doc_llm_25
+          - text
+      height: 120
+      id: doc_llm_result
+      position:
+        x: 2510
+        y: 410
+      positionAbsolute:
+        x: 2510
+        y: 410
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 260
+    - data:
+        context:
+          enabled: false
+          variable_selector: []
+        desc: ''
+        memory:
+          query_prompt_template: '{{#sys.query#}}'
+          role_prefix:
+            assistant: ''
+            user: ''
+          window:
+            enabled: false
+            size: 10
+        model:
+          completion_params:
+            temperature: 0.1
+          mode: chat
+          name: gemini-3.5-flash
+          provider: langgenius/gemini/google
+        prompt_template:
+        - id: Webページ解析-s
+          role: system
+          text: "共有されたWebページをMemoBrain用メモに整理してください。広告やナビゲーションより本文を優先してください。source_type=web、source_urlは共有URL。必ずJSONオブジェクト1個だけ返してください。Markdownは禁止。\n{\n \"action\":\"add\",\n \"title\":\"短い日本語タイトル\",\n \"content\":\"保存する詳細内容\",\n \"query\":\"\",\n \"target\":\"\",\n \"memo_type\":\"memo|todo|idea|url|shopping|tech|work|schedule\",\n \"category\":\"短いカテゴリ\",\n \"tags\":\"カンマ区切り最大5個\",\n \"due_date\":\"期限または空文字\",\n \"update_instruction\":\"\",\n \"source_type\":\"text|image|video|youtube|web|document\",\n \"source_url\":\"元URLまたは空文字\",\n \"summary\":\"2〜5行の要約\",\n \"key_points\":\"重要点を箇条書き文字列\",\n \"todo\":\"内容から明確に発生するTODO。なければ空文字\"\n}"
+        - id: Webページ解析-u
+          role: user
+          text: 'URL: {{#url_extract.url#}}
+
+            ページタイトル: {{#url_clean.title#}}
+
+            本文（最大60000文字）:
+
+            {{#url_clean.text#}}
+
+            切り詰め: {{#url_clean.truncated#}}'
+        selected: false
+        title: Webページ解析 [3.5 Flash fallback]
+        type: llm
+        variables: []
+        vision:
+          enabled: false
+        error_strategy: fail-branch
+      height: 125
+      id: url_llm_35
+      position:
+        x: 2240
+        y: 630
+      positionAbsolute:
+        x: 2240
+        y: 630
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 260
+    - data:
+        context:
+          enabled: false
+          variable_selector: []
+        desc: ''
+        memory:
+          query_prompt_template: '{{#sys.query#}}'
+          role_prefix:
+            assistant: ''
+            user: ''
+          window:
+            enabled: false
+            size: 10
+        model:
+          completion_params:
+            temperature: 0.1
+          mode: chat
+          name: gemini-2.5-flash
+          provider: langgenius/gemini/google
+        prompt_template:
+        - id: Webページ解析-s
+          role: system
+          text: "共有されたWebページをMemoBrain用メモに整理してください。広告やナビゲーションより本文を優先してください。source_type=web、source_urlは共有URL。必ずJSONオブジェクト1個だけ返してください。Markdownは禁止。\n{\n \"action\":\"add\",\n \"title\":\"短い日本語タイトル\",\n \"content\":\"保存する詳細内容\",\n \"query\":\"\",\n \"target\":\"\",\n \"memo_type\":\"memo|todo|idea|url|shopping|tech|work|schedule\",\n \"category\":\"短いカテゴリ\",\n \"tags\":\"カンマ区切り最大5個\",\n \"due_date\":\"期限または空文字\",\n \"update_instruction\":\"\",\n \"source_type\":\"text|image|video|youtube|web|document\",\n \"source_url\":\"元URLまたは空文字\",\n \"summary\":\"2〜5行の要約\",\n \"key_points\":\"重要点を箇条書き文字列\",\n \"todo\":\"内容から明確に発生するTODO。なければ空文字\"\n}"
+        - id: Webページ解析-u
+          role: user
+          text: 'URL: {{#url_extract.url#}}
+
+            ページタイトル: {{#url_clean.title#}}
+
+            本文（最大60000文字）:
+
+            {{#url_clean.text#}}
+
+            切り詰め: {{#url_clean.truncated#}}'
+        selected: false
+        title: Webページ解析 [2.5 Flash fallback]
+        type: llm
+        variables: []
+        vision:
+          enabled: false
+      height: 125
+      id: url_llm_25
+      position:
+        x: 2540
+        y: 630
+      positionAbsolute:
+        x: 2540
+        y: 630
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 260
+    - data:
+        advanced_settings: null
+        desc: 成功したGeminiモデルの出力を既存フローへ渡す
+        output_type: string
+        selected: false
+        title: Webページ解析 モデル出力
+        type: variable-aggregator
+        variables:
+        - - url_llm
+          - text
+        - - url_llm_35
+          - text
+        - - url_llm_25
+          - text
+      height: 120
+      id: url_llm_result
+      position:
+        x: 2840
+        y: 630
+      positionAbsolute:
+        x: 2840
+        y: 630
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 260
+    - data:
+        context:
+          enabled: false
+          variable_selector: []
+        desc: ''
+        memory:
+          query_prompt_template: '{{#sys.query#}}'
+          role_prefix:
+            assistant: ''
+            user: ''
+          window:
+            enabled: false
+            size: 10
+        model:
+          completion_params:
+            temperature: 0.1
+          mode: chat
+          name: gemini-3.5-flash
+          provider: langgenius/gemini/google
+        prompt_template:
+        - id: YouTube解析-s
+          role: system
+          text: "YouTube共有をMemoBrain用に整理してください。字幕は公式Transcriptプラグインの取得結果です。字幕が空、または「Error processing request:」で始まる場合は動画内容を捏造せず、URLと「字幕取得不可」を保存してください。字幕があれば要約、重要点、固有名詞、実用的なTODO候補を抽出してください。source_type=youtube、source_urlには入力されたYouTube URLを一字も省略せず必ず設定してください。contentにも最後に「動画URL: <URL>」を残してください。必ずJSONオブジェクト1個だけ返してください。Markdownは禁止。\n{\n \"action\":\"add\",\n \"title\":\"短い日本語タイトル\",\n \"content\":\"保存する詳細内容\",\n \"query\":\"\",\n \"target\":\"\",\n \"memo_type\":\"memo|todo|idea|url|shopping|tech|work|schedule\",\n \"category\":\"短いカテゴリ\",\n \"tags\":\"カンマ区切り最大5個\",\n \"due_date\":\"期限または空文字\",\n \"update_instruction\":\"\",\n \"source_type\":\"text|image|video|youtube|web|document\",\n \"source_url\":\"元URLまたは空文字\",\n \"summary\":\"2〜5行の要約\",\n \"key_points\":\"重要点を箇条書き文字列\",\n \"todo\":\"内容から明確に発生するTODO。なければ空文字\"\n}"
+        - id: YouTube解析-u
+          role: user
+          text: 'URL: {{#yt_extract.url#}}
+
+            字幕（最大80000文字）:
+
+            {{#yt_limit.transcript#}}
+
+            切り詰め: {{#yt_limit.truncated#}}'
+        selected: false
+        title: YouTube解析 [3.5 Flash fallback]
+        type: llm
+        variables: []
+        vision:
+          enabled: false
+        error_strategy: fail-branch
+      height: 125
+      id: yt_llm_35
+      position:
+        x: 2240
+        y: 870
+      positionAbsolute:
+        x: 2240
+        y: 870
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 260
+    - data:
+        context:
+          enabled: false
+          variable_selector: []
+        desc: ''
+        memory:
+          query_prompt_template: '{{#sys.query#}}'
+          role_prefix:
+            assistant: ''
+            user: ''
+          window:
+            enabled: false
+            size: 10
+        model:
+          completion_params:
+            temperature: 0.1
+          mode: chat
+          name: gemini-2.5-flash
+          provider: langgenius/gemini/google
+        prompt_template:
+        - id: YouTube解析-s
+          role: system
+          text: "YouTube共有をMemoBrain用に整理してください。字幕は公式Transcriptプラグインの取得結果です。字幕が空、または「Error processing request:」で始まる場合は動画内容を捏造せず、URLと「字幕取得不可」を保存してください。字幕があれば要約、重要点、固有名詞、実用的なTODO候補を抽出してください。source_type=youtube、source_urlには入力されたYouTube URLを一字も省略せず必ず設定してください。contentにも最後に「動画URL: <URL>」を残してください。必ずJSONオブジェクト1個だけ返してください。Markdownは禁止。\n{\n \"action\":\"add\",\n \"title\":\"短い日本語タイトル\",\n \"content\":\"保存する詳細内容\",\n \"query\":\"\",\n \"target\":\"\",\n \"memo_type\":\"memo|todo|idea|url|shopping|tech|work|schedule\",\n \"category\":\"短いカテゴリ\",\n \"tags\":\"カンマ区切り最大5個\",\n \"due_date\":\"期限または空文字\",\n \"update_instruction\":\"\",\n \"source_type\":\"text|image|video|youtube|web|document\",\n \"source_url\":\"元URLまたは空文字\",\n \"summary\":\"2〜5行の要約\",\n \"key_points\":\"重要点を箇条書き文字列\",\n \"todo\":\"内容から明確に発生するTODO。なければ空文字\"\n}"
+        - id: YouTube解析-u
+          role: user
+          text: 'URL: {{#yt_extract.url#}}
+
+            字幕（最大80000文字）:
+
+            {{#yt_limit.transcript#}}
+
+            切り詰め: {{#yt_limit.truncated#}}'
+        selected: false
+        title: YouTube解析 [2.5 Flash fallback]
+        type: llm
+        variables: []
+        vision:
+          enabled: false
+      height: 125
+      id: yt_llm_25
+      position:
+        x: 2540
+        y: 870
+      positionAbsolute:
+        x: 2540
+        y: 870
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 260
+    - data:
+        advanced_settings: null
+        desc: 成功したGeminiモデルの出力を既存フローへ渡す
+        output_type: string
+        selected: false
+        title: YouTube解析 モデル出力
+        type: variable-aggregator
+        variables:
+        - - yt_llm
+          - text
+        - - yt_llm_35
+          - text
+        - - yt_llm_25
+          - text
+      height: 120
+      id: yt_llm_result
+      position:
+        x: 2840
+        y: 870
+      positionAbsolute:
+        x: 2840
+        y: 870
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 260
+    viewport:
+      x: -250
+      y: -100
+      zoom: 0.55
+  rag_pipeline_variables: []

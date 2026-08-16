@@ -2,13 +2,14 @@
 
 ## 推奨DSL
 
-- `MemoBrain_DifyOnly_v0.3.2.yml`: Knowledge補完とGeminiモデル自動切替を備えた推奨Advanced Chatflow
+- `MemoBrain_DifyOnly_v0.3.3.yml`: 正常系接続を修正したKnowledge補完・Geminiモデル自動切替版（推奨）
+- `MemoBrain_DifyOnly_v0.3.2.yml`: Geminiモデル自動切替の初期版（正常系接続に不具合があるため非推奨）
 - `MemoBrain_DifyOnly_v0.3.1.yml`: DuckDuckGo QueryとKnowledge該当なし分岐を修正した従来モデル版
 - `MemoBrain_DifyOnly_v0.2.2.yml`: Web検索を行わない従来版
 
 AndroidアプリとDify DSLは別バージョンで管理します。Android v1.1.0に更新しても、Dify DSLを必ず変更する必要はありません。
 
-## v0.3.2の動作
+## v0.3.3の動作
 
 1. 利用者の質問で既存Knowledgeを検索
 2. 十分な根拠があればKnowledgeから回答
@@ -18,6 +19,10 @@ AndroidアプリとDify DSLは別バージョンで管理します。Android v1.
 6. 登録した内容を回答
 
 Knowledge候補が返っていても、回答生成が「該当なし」と判断した場合はWeb検索へ切り替えます。
+
+## v0.3.3での修正
+
+Difyの失敗分岐を有効にしたLLMノードでも、正常系の接続ハンドルは`source`です。v0.3.2で使用していた`success-branch`を`source`へ修正し、各モデルの成功後に出力アグリゲーターを経由して既存フローが継続するようにしました。
 
 ## Geminiモデル自動切替
 
@@ -50,4 +55,4 @@ DuckDuckGo SearchにはAPI Keyは不要ですが、セルフホストDifyから�
 
 ## データ送信上の注意
 
-ナレッジ補完を使うと、質問の検索語句はDuckDuckGo Searchプラグインへ送信されます。検索結果は、Difyに設定したGeminiへ渡して記事化し、利用者自身のKnowledgeへ保存します。外部検索を避けたい場合はv0.2.2を使用するか、v0.3.2のWeb検索経路を無効化してください。
+ナレッジ補完を使うと、質問の検索語句はDuckDuckGo Searchプラグインへ送信されます。検索結果は、Difyに設定したGeminiへ渡して記事化し、利用者自身のKnowledgeへ保存します。外部検索を避けたい場合はv0.2.2を使用するか、v0.3.3のWeb検索経路を無効化してください。
