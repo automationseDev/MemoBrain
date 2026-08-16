@@ -11,7 +11,7 @@ param(
 $ErrorActionPreference = "Stop"
 $GradleVersion = "9.5.1"
 $CompileSdk = 36
-$OutputApkName = "MemoBrain-v0.4.1-debug.apk"
+$OutputApkName = "MemoBrain-v1.0.0-debug.apk"
 $GradleBaseUrl = "https://services.gradle.org/distributions"
 $GradleZipName = "gradle-$GradleVersion-bin.zip"
 $GradleZipUrl = "$GradleBaseUrl/$GradleZipName"
@@ -189,7 +189,7 @@ function Ensure-GradleWrapper {
 
 if (-not [string]::IsNullOrWhiteSpace($PSScriptRoot)) {$ProjectRoot=$PSScriptRoot} elseif ($MyInvocation.MyCommand.Path) {$ProjectRoot=Split-Path -Parent $MyInvocation.MyCommand.Path} else {$ProjectRoot=(Get-Location).Path}
 $ProjectRoot=(Resolve-Path -LiteralPath $ProjectRoot).Path
-Write-Host "MemoBrain APK Builder v0.4.1" -ForegroundColor Green
+Write-Host "MemoBrain APK Builder v1.0.0" -ForegroundColor Green
 foreach ($required in @("settings.gradle.kts","build.gradle.kts","app\build.gradle.kts")) { if (-not (Test-Path (Join-Path $ProjectRoot $required))) { Fail "必要ファイルが見つかりません: $required" } }
 $javaInfo=Find-Java -ExplicitJavaHome $JavaHome; if (-not $javaInfo) { Fail "JDK 17～26を検出できませんでした。" }
 $env:JAVA_HOME=$javaInfo.JavaHome; $env:Path=(Join-Path $javaInfo.JavaHome "bin")+";"+$env:Path
