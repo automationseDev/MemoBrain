@@ -1,0 +1,21 @@
+# PC / extraction-location specific
+local.properties
+
+# Release-only local configuration
+release-secrets.properties
+
+# Android Studio / Gradle generated
+.gradle/
+.idea/*
+!.idea/gradle.xml
+**/build/
+output/
+
+# Signing material: never commit or distribute privately held signing keys/passwords
+*.jks
+*.keystore
+keystore.properties
+signing.properties
+# Local credentials / signing
+key.properties
+# Android local machine state
