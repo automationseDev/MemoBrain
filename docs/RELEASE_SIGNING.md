@@ -1,25 +1,10 @@
 # 署名済み Release APK の作成
 
-MemoBrain の GitHub Releases と Samsung Galaxy Store には、同じ `applicationId`、同じ `versionCode`、同じ署名鍵で作成した同一 Release APK を使用します。
+MemoBrain の Release APK は、同じ `applicationId`、同じ署名鍵、増加する `versionCode` を維持して更新します。
 
-## 1. 正式 AdMob ID を設定
+ネイティブ AdMob は使用しないため、Release APK の作成に AdMob App ID / Banner Ad Unit ID は不要です。広告を利用する場合の AdSense 設定は Webサーバー側の `web/memobrain-chat/config.js` で行います。
 
-`android/MemoBrainShare/release-secrets.properties.example` をコピーして、次のローカルファイルを作成します。
-
-```text
-android/MemoBrainShare/release-secrets.properties
-```
-
-内容:
-
-```properties
-MEMOBRAIN_ADMOB_APP_ID=ca-app-pub-xxxxxxxxxxxxxxxx~xxxxxxxxxx
-MEMOBRAIN_ADMOB_BANNER_ID=ca-app-pub-xxxxxxxxxxxxxxxx/xxxxxxxxxx
-```
-
-このファイルは `.gitignore` 対象です。
-
-## 2. 署名情報を設定
+## 1. 署名情報を設定
 
 `android/MemoBrainShare/signing-secrets.properties.example` をコピーして、次のローカルファイルを作成します。
 
@@ -40,7 +25,7 @@ Windows のパスは `/` を使うと `.properties` のバックスラッシュ�
 
 `signing-secrets.properties`、`.jks`、`.keystore` はすべて Git の除外対象です。
 
-## 3. Release APK をビルド
+## 2. Release APK をビルド
 
 Windows では以下を実行します。
 
@@ -61,16 +46,14 @@ cd android\MemoBrainShare
 .\Build-MemoBrainRelease.ps1 -Clean
 ```
 
-内部では Gradle の `:app:assembleRelease` を実行します。Release ビルド時には次の両方を検証します。
+内部では Gradle の `:app:assembleRelease` を実行します。Release ビルド時には次を検証します。
 
-- 正式 AdMob App ID / Banner Ad Unit ID が設定されていること
 - Keystore path / password / alias / key password がすべて設定されていること
+- 指定した keystore ファイルが存在すること
 
-未設定、Google テスト広告 ID、ダミー広告 ID、存在しない keystore の場合はビルドを停止します。
+## 3. 出力
 
-## 4. 出力
-
-成功すると以下を生成します。
+現在のブランチでは成功すると以下を生成します。
 
 ```text
 android/MemoBrainShare/output/MemoBrain-v1.0.0-release.apk
@@ -79,26 +62,34 @@ android/MemoBrainShare/output/SHA256SUMS.txt
 
 Android SDK の `apksigner.bat` を検出できる環境では、スクリプトが APK の署名検証も自動実行します。
 
-## 5. 配布
+正式リリース時には `versionName` / `versionCode` と出力ファイル名をリリース番号に合わせて更新してください。
 
-同じ `MemoBrain-v1.0.0-release.apk` を次の両方へ使用します。
+## 4. AdSense は Webサーバー側で設定
 
-- GitHub Releases
-- Samsung Galaxy Store
+Android Release APK に広告IDは注入しません。
 
-異なる署名鍵で再ビルドした APK を片方だけへ出さないでください。更新時も同じ keystore / alias を使い、`versionCode` を必ず増やします。
+`web/memobrain-chat/config.example.js` を参考に、実際のHTTPS配備先だけで `config.js` を作成します。
 
-## 環境変数 / Gradle property を使う場合
+```javascript
+window.MEMOBRAIN_CHAT_CONFIG = {
+  difyWebAppUrl: "https://your-dify.example.com/chat/replace-me",
+  adsenseClient: "ca-pub-...",
+  adsenseSlot: "...",
+  showAdPlaceholder: false
+};
+```
 
-ローカル `.properties` ファイルの代わりに、次の名前を Gradle project property または環境変数として渡すこともできます。
+`config.js` はGit管理対象外です。AdSense値はAPKにもGitHubにも入れる必要がありません。
+
+## 5. 環境変数 / Gradle property を使う場合
+
+署名情報はローカル `.properties` ファイルの代わりに、次の名前を Gradle project property または環境変数として渡せます。
 
 ```text
-MEMOBRAIN_ADMOB_APP_ID
-MEMOBRAIN_ADMOB_BANNER_ID
 MEMOBRAIN_KEYSTORE_PATH
 MEMOBRAIN_KEYSTORE_PASSWORD
 MEMOBRAIN_KEY_ALIAS
 MEMOBRAIN_KEY_PASSWORD
 ```
 
-これにより、将来 GitHub Actions の Secrets を使った自動署名にも移行できます。
+これにより、将来 GitHub Actions Secrets を使った自動署名にも移行できます。

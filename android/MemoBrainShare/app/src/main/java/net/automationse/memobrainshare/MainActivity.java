@@ -12,11 +12,11 @@ import android.os.Handler;
 import android.os.Looper;
 import android.text.InputType;
 import android.view.View;
+import android.view.WindowInsets;
 import android.view.WindowManager;
 import android.view.inputmethod.EditorInfo;
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
@@ -30,38 +30,23 @@ import androidx.work.NetworkType;
 import androidx.work.OneTimeWorkRequest;
 import androidx.work.WorkManager;
 
-import com.google.android.gms.ads.AdRequest;
-import com.google.android.gms.ads.AdSize;
-import com.google.android.gms.ads.AdView;
-import com.google.android.gms.ads.MobileAds;
-import com.google.android.ump.ConsentInformation;
-import com.google.android.ump.ConsentRequestParameters;
-import com.google.android.ump.UserMessagingPlatform;
-
 import java.util.ArrayList;
 import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 public class MainActivity extends Activity {
     private TextView status;
     private TextView preview;
     private EditText note;
     private Button sendButton;
-    private Button privacyOptionsButton;
-    private FrameLayout adContainer;
-    private AdView adView;
 
     private final ArrayList<Uri> uris = new ArrayList<>();
     private String sharedText = "";
     private String mime = "";
     private SecurePrefs prefs;
     private final ExecutorService stagingExecutor = Executors.newSingleThreadExecutor();
-
-    private ConsentInformation consentInformation;
-    private final AtomicBoolean mobileAdsInitialized = new AtomicBoolean(false);
 
     @Override
     public void onCreate(Bundle b) {
@@ -73,7 +58,6 @@ public class MainActivity extends Activity {
         requestNotificationPermissionIfNeeded();
         handle(getIntent());
         stagingExecutor.execute(() -> PendingJobStore.cleanupExpired(getApplicationContext()));
-        initConsentAndAds();
     }
 
     @Override
@@ -85,10 +69,6 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onDestroy() {
-        if (adView != null) {
-            adView.destroy();
-            adView = null;
-        }
         stagingExecutor.shutdown();
         super.onDestroy();
     }
@@ -96,10 +76,12 @@ public class MainActivity extends Activity {
     private void buildUi() {
         LinearLayout outer = new LinearLayout(this);
         outer.setOrientation(LinearLayout.VERTICAL);
+
         ScrollView scroll = new ScrollView(this);
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(32, 64, 32, 32);
+
+        applySystemBarInsets(outer, root);
 
         TextView title = new TextView(this);
         title.setText("🧠 MemoBrain Share");
@@ -108,16 +90,21 @@ public class MainActivity extends Activity {
 
         TextView required = new TextView(this);
         required.setText("【Dify必須】このアプリ単体では保存できません。利用者自身のDify環境とApp API Keyが必要です。共有内容は、利用者が設定したDifyへHTTPSで送信されます。");
-        required.setPadding(0, 12, 0, 0);
+        required.setPadding(0, dp(12), 0, 0);
         root.addView(required);
 
         TextView privacy = new TextView(this);
         privacy.setText("端末内の送信待ちデータはアプリ専用領域で暗号化し、送信完了・最終失敗時に削除します。未送信でも最大24時間で削除します。バックアップも無効です。");
-        privacy.setPadding(0, 10, 0, 0);
+        privacy.setPadding(0, dp(10), 0, 0);
         root.addView(privacy);
 
+        TextView webAds = new TextView(this);
+        webAds.setText("広告を表示する場合は、AIチャット画面で開くWebページ内のAdSenseを使用します。アプリ本体にはネイティブ広告を表示しません。");
+        webAds.setPadding(0, dp(10), 0, 0);
+        root.addView(webAds);
+
         preview = new TextView(this);
-        preview.setPadding(0, 24, 0, 12);
+        preview.setPadding(0, dp(24), 0, dp(12));
         root.addView(preview);
 
         note = new EditText(this);
@@ -141,24 +128,41 @@ public class MainActivity extends Activity {
         connection.setOnClickListener(v -> connectionSettings());
         root.addView(connection);
 
-        privacyOptionsButton = new Button(this);
-        privacyOptionsButton.setText("広告のプライバシー設定");
-        privacyOptionsButton.setVisibility(View.GONE);
-        privacyOptionsButton.setOnClickListener(v -> showPrivacyOptions());
-        root.addView(privacyOptionsButton);
-
         status = new TextView(this);
-        status.setPadding(0, 16, 0, 0);
+        status.setPadding(0, dp(16), 0, 0);
         root.addView(status);
 
         scroll.addView(root, new ScrollView.LayoutParams(-1, -2));
         outer.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1f));
-
-        adContainer = new FrameLayout(this);
-        adContainer.setVisibility(View.GONE);
-        outer.addView(adContainer, new LinearLayout.LayoutParams(-1, -2));
-
         setContentView(outer);
+    }
+
+    private void applySystemBarInsets(View outer, View content) {
+        final int horizontal = dp(20);
+        final int topBase = dp(24);
+        final int bottomBase = dp(24);
+        content.setPadding(horizontal, topBase, horizontal, bottomBase);
+
+        outer.setOnApplyWindowInsetsListener((v, insets) -> {
+            int top;
+            int bottom;
+            if (Build.VERSION.SDK_INT >= 30) {
+                android.graphics.Insets bars = insets.getInsets(WindowInsets.Type.systemBars());
+                top = bars.top;
+                bottom = bars.bottom;
+            } else {
+                top = insets.getSystemWindowInsetTop();
+                bottom = insets.getSystemWindowInsetBottom();
+            }
+            content.setPadding(horizontal, topBase + top, horizontal, bottomBase);
+            v.setPadding(0, 0, 0, bottom);
+            return insets;
+        });
+        outer.requestApplyInsets();
+    }
+
+    private int dp(int value) {
+        return Math.round(value * getResources().getDisplayMetrics().density);
     }
 
     @SuppressWarnings("deprecation")
@@ -269,8 +273,8 @@ public class MainActivity extends Activity {
 
     private void connectionSettings() {
         final TextView explain = new TextView(this);
-        explain.setText("本アプリの利用にはDifyが必須です。共有内容はここで指定したDifyへ送信されます。API BaseとAPI Key、AIチャット Web URLは端末内で暗号化して保存し、APKには含めません。AIチャット Web URLにはDifyの公開Web App URL、またはDifyを埋め込んだ自分のHTTPSページを指定できます。");
-        explain.setPadding(0, 0, 0, 16);
+        explain.setText("本アプリの利用にはDifyが必須です。共有内容はここで指定したDifyへ送信されます。API BaseとAPI Key、AIチャット Web URLは端末内で暗号化して保存し、APKには含めません。AdSenseを使う場合は、AIチャット Web URLにDifyを埋め込んだ自分のHTTPSページを指定してください。");
+        explain.setPadding(0, 0, 0, dp(16));
 
         final EditText base = new EditText(this);
         base.setHint("Dify API Base 例: https://example.com/v1");
@@ -295,7 +299,7 @@ public class MainActivity extends Activity {
 
         LinearLayout l = new LinearLayout(this);
         l.setOrientation(LinearLayout.VERTICAL);
-        l.setPadding(32, 0, 32, 0);
+        l.setPadding(dp(32), 0, dp(32), 0);
         l.addView(explain);
         l.addView(base);
         l.addView(key);
@@ -355,83 +359,6 @@ public class MainActivity extends Activity {
                             .show());
         });
         dialog.show();
-    }
-
-    private void initConsentAndAds() {
-        consentInformation = UserMessagingPlatform.getConsentInformation(this);
-        ConsentRequestParameters params = new ConsentRequestParameters.Builder().build();
-        consentInformation.requestConsentInfoUpdate(
-                this,
-                params,
-                () -> {
-                    updatePrivacyOptionsButton();
-                    UserMessagingPlatform.loadAndShowConsentFormIfRequired(this, formError -> {
-                        updatePrivacyOptionsButton();
-                        if (consentInformation.canRequestAds()) initializeMobileAdsSdk();
-                    });
-                },
-                requestConsentError -> {
-                    updatePrivacyOptionsButton();
-                    if (consentInformation.canRequestAds()) initializeMobileAdsSdk();
-                });
-        if (consentInformation.canRequestAds()) initializeMobileAdsSdk();
-    }
-
-    private void initializeMobileAdsSdk() {
-        if (!mobileAdsInitialized.compareAndSet(false, true)) {
-            runOnUiThread(this::loadBanner);
-            return;
-        }
-        new Thread(() -> MobileAds.initialize(getApplicationContext(), initializationStatus -> runOnUiThread(this::loadBanner))).start();
-    }
-
-    private void loadBanner() {
-        if (consentInformation != null && !consentInformation.canRequestAds()) {
-            hideBanner();
-            return;
-        }
-        String unitId = BuildConfig.ADMOB_BANNER_ID;
-        if (unitId == null || unitId.trim().isEmpty()) {
-            hideBanner();
-            return;
-        }
-        if (adView != null) {
-            adView.destroy();
-            adContainer.removeAllViews();
-        }
-        adView = new AdView(this);
-        adView.setAdUnitId(unitId.trim());
-        adView.setAdSize(AdSize.BANNER);
-        adContainer.removeAllViews();
-        adContainer.addView(adView, new FrameLayout.LayoutParams(-2, -2));
-        adContainer.setVisibility(View.VISIBLE);
-        adView.loadAd(new AdRequest.Builder().build());
-    }
-
-    private void hideBanner() {
-        if (adView != null) {
-            adView.destroy();
-            adView = null;
-        }
-        adContainer.removeAllViews();
-        adContainer.setVisibility(View.GONE);
-    }
-
-    private void updatePrivacyOptionsButton() {
-        runOnUiThread(() -> {
-            boolean required = consentInformation != null
-                    && consentInformation.getPrivacyOptionsRequirementStatus() == ConsentInformation.PrivacyOptionsRequirementStatus.REQUIRED;
-            privacyOptionsButton.setVisibility(required ? View.VISIBLE : View.GONE);
-        });
-    }
-
-    private void showPrivacyOptions() {
-        if (consentInformation == null) return;
-        UserMessagingPlatform.showPrivacyOptionsForm(this, formError -> {
-            updatePrivacyOptionsButton();
-            if (consentInformation.canRequestAds()) initializeMobileAdsSdk();
-            else hideBanner();
-        });
     }
 
     private void requestNotificationPermissionIfNeeded() {

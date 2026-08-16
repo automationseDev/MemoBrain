@@ -5,8 +5,11 @@ import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
+import android.view.Gravity;
 import android.view.View;
+import android.view.WindowInsets;
 import android.view.WindowManager;
 import android.webkit.CookieManager;
 import android.webkit.ValueCallback;
@@ -59,21 +62,30 @@ public class ChatActivity extends Activity {
 
         LinearLayout header = new LinearLayout(this);
         header.setOrientation(LinearLayout.HORIZONTAL);
-        header.setPadding(16, 16, 16, 8);
+        header.setGravity(Gravity.CENTER_VERTICAL);
+        header.setPadding(dp(8), dp(6), dp(8), dp(6));
 
         Button close = new Button(this);
-        close.setText("戻る");
+        close.setText("← 戻る");
+        close.setTextSize(14);
+        close.setMinWidth(0);
+        close.setMinHeight(dp(48));
+        close.setPadding(dp(12), 0, dp(12), 0);
         close.setOnClickListener(v -> finish());
         header.addView(close, new LinearLayout.LayoutParams(-2, -2));
 
         TextView title = new TextView(this);
-        title.setText("  MemoBrain AIチャット");
-        title.setTextSize(20);
-        title.setGravity(android.view.Gravity.CENTER_VERTICAL);
-        header.addView(title, new LinearLayout.LayoutParams(0, -1, 1f));
+        title.setText("MemoBrain AIチャット");
+        title.setTextSize(18);
+        title.setGravity(Gravity.CENTER);
+        header.addView(title, new LinearLayout.LayoutParams(0, dp(48), 1f));
 
         Button reload = new Button(this);
         reload.setText("再読込");
+        reload.setTextSize(14);
+        reload.setMinWidth(0);
+        reload.setMinHeight(dp(48));
+        reload.setPadding(dp(12), 0, dp(12), 0);
         reload.setOnClickListener(v -> {
             if (webView != null) webView.reload();
         });
@@ -84,12 +96,41 @@ public class ChatActivity extends Activity {
         progress = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
         progress.setMax(100);
         progress.setVisibility(View.GONE);
-        root.addView(progress, new LinearLayout.LayoutParams(-1, -2));
+        root.addView(progress, new LinearLayout.LayoutParams(-1, dp(3)));
 
         webView = new WebView(this);
         root.addView(webView, new LinearLayout.LayoutParams(-1, 0, 1f));
 
+        applySystemBarInsets(root, header);
         setContentView(root);
+    }
+
+    private void applySystemBarInsets(View root, View header) {
+        final int left = dp(8);
+        final int topBase = dp(6);
+        final int right = dp(8);
+        final int bottomBase = dp(6);
+
+        root.setOnApplyWindowInsetsListener((v, insets) -> {
+            int top;
+            int bottom;
+            if (Build.VERSION.SDK_INT >= 30) {
+                android.graphics.Insets bars = insets.getInsets(WindowInsets.Type.systemBars());
+                top = bars.top;
+                bottom = bars.bottom;
+            } else {
+                top = insets.getSystemWindowInsetTop();
+                bottom = insets.getSystemWindowInsetBottom();
+            }
+            header.setPadding(left, topBase + top, right, bottomBase);
+            v.setPadding(0, 0, 0, bottom);
+            return insets;
+        });
+        root.requestApplyInsets();
+    }
+
+    private int dp(int value) {
+        return Math.round(value * getResources().getDisplayMetrics().density);
     }
 
     private void configureWebView() {
@@ -109,8 +150,9 @@ public class ChatActivity extends Activity {
 
         WebView.setWebContentsDebuggingEnabled(BuildConfig.DEBUG);
 
-        // Google recommends registering a WebView that can contain AdSense / GPT tags.
-        // If the configured URL is the Dify Web App directly this has no visible effect.
+        // This app has no native AdMob banner. The SDK is retained only for
+        // Google's WebView API for Ads so AdSense/GPT tags inside the loaded
+        // publisher-owned HTTPS page can receive supported app signals.
         MobileAds.registerWebView(webView);
 
         webView.setWebViewClient(new WebViewClient() {
