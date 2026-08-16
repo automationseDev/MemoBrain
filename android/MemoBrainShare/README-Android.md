@@ -1,11 +1,11 @@
-# MemoBrain Android v0.4.1
+# MemoBrain Android v1.0.0
 
 MemoBrain Share は、Android の共有メニューからテキスト・URL・画像・動画・PDF/文書を Dify に送信するためのクライアントです。
 
 > **重要: Dify が必須です。**
 > このアプリ単体ではメモ保存機能は動作しません。利用者自身が用意した Dify 環境、対応 Chatflow、Dify App API Base、App API Key が必要です。
 
-## v0.4.1 のプライバシー設計
+## v1.0.0 のプライバシー設計
 
 - Dify API Base / API Key は APK に含めない
 - Dify接続情報は Android Keystore を利用して端末内で暗号化
@@ -48,7 +48,7 @@ Debugビルドは必ずGoogle公式テスト広告IDを使用します。
 生成先:
 
 ```text
-MemoBrainShare\output\MemoBrain-v0.4.1-debug.apk
+MemoBrainShare\output\MemoBrain-v1.0.0-debug.apk
 ```
 
 ## 正式版 AdMob ID
