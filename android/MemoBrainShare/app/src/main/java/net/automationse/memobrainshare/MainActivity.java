@@ -215,6 +215,16 @@ public class MainActivity extends Activity {
     }
 
     private void enqueueSave() {
+        String noteValue = note.getText() == null ? "" : note.getText().toString().trim();
+        boolean hasSharedText = sharedText != null && !sharedText.trim().isEmpty();
+        boolean hasAttachments = !uris.isEmpty();
+        if (!hasSharedText && !hasAttachments && noteValue.isEmpty()) {
+            status.setText("保存する内容がありません。テキストまたは補足メモを入力するか、ファイルを共有してください。");
+            Toast.makeText(this, "保存する内容を入力してください", Toast.LENGTH_LONG).show();
+            note.requestFocus();
+            return;
+        }
+
         String key = prefs.getKey();
         String base = prefs.getBase();
         if (key.isEmpty() || base.isEmpty()) {
@@ -229,7 +239,7 @@ public class MainActivity extends Activity {
 
         sendButton.setEnabled(false);
         status.setText(uris.isEmpty() ? "暗号化して保存キューに登録しています…" : "共有ファイルを暗号化して一時保存しています…");
-        final String q = marker() + "\n" + sharedText + "\n補足: " + note.getText().toString();
+        final String q = marker() + "\n" + sharedText + "\n補足: " + noteValue;
         final ArrayList<Uri> snapshotUris = new ArrayList<>(uris);
         final String snapshotMime = mime;
 
