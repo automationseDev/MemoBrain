@@ -3,7 +3,7 @@ setlocal
 cd /d "%~dp0"
 
 echo.
-echo MemoBrain APK Builder v0.4.1
+echo MemoBrain APK Builder v1.0.0
 echo.
 
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0Build-MemoBrainApk.ps1"
