@@ -24,7 +24,7 @@ jobs:
     env:
       MEMOBRAIN_ADMOB_APP_ID: ca-app-pub-1111111111111111~1111111111
       MEMOBRAIN_ADMOB_BANNER_ID: ca-app-pub-1111111111111111/1111111111
-      MEMOBRAIN_KEYSTORE_PATH: ${{ runner.temp }}/memobrain-ci-release.jks
+      MEMOBRAIN_KEYSTORE_PATH: /tmp/memobrain-ci-release.jks
       MEMOBRAIN_KEYSTORE_PASSWORD: memobrain-ci-password
       MEMOBRAIN_KEY_ALIAS: memobrain-ci
       MEMOBRAIN_KEY_PASSWORD: memobrain-ci-password
