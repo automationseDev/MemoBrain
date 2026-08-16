@@ -4,7 +4,7 @@ MemoBrain は Dify が必須です。Android アプリだけをインストー�
 
 ## 1. DSL をインポート
 
-Dify の Studio から `dify/MemoBrain_DifyOnly_v0.2.2.yml` をインポートします。
+`dify/MemoBrain-v0.2.2-DifyPatch.zip` を展開し、収録されている `MemoBrain_DifyOnly_v0.2.2.yml` を Dify Studio からインポートします。
 
 YouTube の字幕取得には `langgenius/transcript` の Transcript ツールを使用します。インポート時またはノード設定時に要求された場合は Dify のプラグイン画面から導入してください。
 
@@ -16,7 +16,7 @@ YouTube の字幕取得には `langgenius/transcript` の Transcript ツール�
 - `KNOWLEDGE_API_KEY`: Dify Knowledge Service API Key
 - `DATASET_NAME`: MemoBrain が利用する Knowledge 名。既定値 `MemoBrain`
 
-公開リポジトリの DSL に実キーは含まれていません。
+公開リポジトリの配布パッケージに実キーは含まれていません。
 
 ## 3. Android アプリ用 App API Key
 
