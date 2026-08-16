@@ -131,6 +131,11 @@ public class MainActivity extends Activity {
         sendButton.setOnClickListener(v -> enqueueSave());
         root.addView(sendButton);
 
+        Button chat = new Button(this);
+        chat.setText("Dify AIチャットを開く");
+        chat.setOnClickListener(v -> openChat());
+        root.addView(chat);
+
         Button connection = new Button(this);
         connection.setText("Dify接続設定（必須）");
         connection.setOnClickListener(v -> connectionSettings());
@@ -195,6 +200,16 @@ public class MainActivity extends Activity {
         return Intent.ACTION_SEND.equals(action) || Intent.ACTION_SEND_MULTIPLE.equals(action);
     }
 
+    private void openChat() {
+        String chatUrl = prefs.getChatWebUrl();
+        if (chatUrl.isEmpty() || !chatUrl.toLowerCase(Locale.ROOT).startsWith("https://")) {
+            Toast.makeText(this, "Dify接続設定でAIチャット Web URLを登録してください", Toast.LENGTH_LONG).show();
+            connectionSettings();
+            return;
+        }
+        startActivity(new Intent(this, ChatActivity.class));
+    }
+
     private void enqueueSave() {
         String key = prefs.getKey();
         String base = prefs.getBase();
@@ -254,7 +269,7 @@ public class MainActivity extends Activity {
 
     private void connectionSettings() {
         final TextView explain = new TextView(this);
-        explain.setText("本アプリの利用にはDifyが必須です。共有内容はここで指定したDifyへ送信されます。API BaseとAPI Keyは端末内で暗号化して保存し、APKには含めません。");
+        explain.setText("本アプリの利用にはDifyが必須です。共有内容はここで指定したDifyへ送信されます。API BaseとAPI Key、AIチャット Web URLは端末内で暗号化して保存し、APKには含めません。AIチャット Web URLにはDifyの公開Web App URL、またはDifyを埋め込んだ自分のHTTPSページを指定できます。");
         explain.setPadding(0, 0, 0, 16);
 
         final EditText base = new EditText(this);
@@ -271,12 +286,20 @@ public class MainActivity extends Activity {
         key.setImeOptions(EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING);
         if (Build.VERSION.SDK_INT >= 26) key.setImportantForAutofill(View.IMPORTANT_FOR_AUTOFILL_NO_EXCLUDE_DESCENDANTS);
 
+        final EditText chatWebUrl = new EditText(this);
+        chatWebUrl.setHint("AIチャット Web URL（任意・HTTPS）");
+        chatWebUrl.setText(prefs.getChatWebUrl());
+        chatWebUrl.setSingleLine(true);
+        chatWebUrl.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_URI);
+        chatWebUrl.setImeOptions(EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING);
+
         LinearLayout l = new LinearLayout(this);
         l.setOrientation(LinearLayout.VERTICAL);
         l.setPadding(32, 0, 32, 0);
         l.addView(explain);
         l.addView(base);
         l.addView(key);
+        l.addView(chatWebUrl);
 
         AlertDialog dialog = new AlertDialog.Builder(this)
                 .setTitle("Dify接続設定")
@@ -290,6 +313,7 @@ public class MainActivity extends Activity {
             dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
                 String baseValue = base.getText().toString().trim();
                 String keyValue = key.getText().toString().trim();
+                String chatWebValue = chatWebUrl.getText().toString().trim();
                 if (!baseValue.toLowerCase(Locale.ROOT).startsWith("https://")) {
                     base.setError("HTTPSのDify API Baseを入力してください");
                     return;
@@ -298,9 +322,14 @@ public class MainActivity extends Activity {
                     key.setError("Dify App API Keyを入力してください");
                     return;
                 }
+                if (!chatWebValue.isEmpty() && !chatWebValue.toLowerCase(Locale.ROOT).startsWith("https://")) {
+                    chatWebUrl.setError("HTTPSのWeb URLを入力してください");
+                    return;
+                }
                 try {
                     prefs.putBase(baseValue);
                     prefs.putKey(keyValue);
+                    prefs.putChatWebUrl(chatWebValue);
                     status.setText("");
                     Toast.makeText(this, "Dify接続設定を暗号化して保存しました", Toast.LENGTH_SHORT).show();
                     dialog.dismiss();
@@ -312,11 +341,12 @@ public class MainActivity extends Activity {
             dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener(v ->
                     new AlertDialog.Builder(this)
                             .setTitle("接続情報を削除")
-                            .setMessage("端末に保存されているDify API BaseとAPI Keyを削除します。")
+                            .setMessage("端末に保存されているDify API Base、API Key、AIチャット Web URLを削除します。")
                             .setPositiveButton("削除", (d, w) -> {
                                 prefs.clearConnection();
                                 base.setText("");
                                 key.setText("");
+                                chatWebUrl.setText("");
                                 status.setText("Dify接続設定が必要です。");
                                 Toast.makeText(this, "接続情報を削除しました", Toast.LENGTH_SHORT).show();
                                 dialog.dismiss();
