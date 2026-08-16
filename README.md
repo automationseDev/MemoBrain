@@ -16,7 +16,7 @@ MemoBrain は、Android の共有メニューから URL、YouTube、テキスト
 ```text
 MemoBrain/
 ├─ android/MemoBrainShare/       Android アプリソース
-├─ dify/                         Dify DSL
+├─ dify/                         Dify DSL 配布パッケージ
 ├─ docs/                         導入・公開・プライバシー資料
 ├─ scripts/                      Dify 疎通確認ツール
 ├─ .gitignore
@@ -27,7 +27,7 @@ MemoBrain/
 ## クイックスタート
 
 1. Dify を用意します。
-2. `dify/MemoBrain_DifyOnly_v0.2.2.yml` を Dify にインポートします。
+2. `dify/MemoBrain-v0.2.2-DifyPatch.zip` を展開し、収録された `MemoBrain_DifyOnly_v0.2.2.yml` を Dify にインポートします。
 3. Dify 側の環境変数 `DIFY_API_BASE`、`KNOWLEDGE_API_KEY`、`DATASET_NAME` を設定します。
 4. MemoBrain の APK をインストールします。
 5. MemoBrain の「Dify接続設定」に Dify App API Base URL と App API Key を設定します。
