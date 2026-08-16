@@ -5,6 +5,13 @@
 - Android app version 1.0.0 / versionCode 7
 - GitHub / Galaxy Store 配布を見据えた公開構成を採用
 - Dify 必須構成、暗号化保存、バックグラウンド送信、AdMob Release設定を維持
+- `signing-secrets.properties` によるローカル署名設定を追加
+- Release APK / AAB の Gradle signingConfig を追加
+- Release時に AdMob設定と署名設定を検証し、不備がある場合はビルド停止
+- `Build-MemoBrainRelease.ps1/.cmd` を追加
+- Release APK生成時に `SHA256SUMS.txt` を作成
+- Android SDKの `apksigner` を検出できる場合は署名を自動検証
+- GitHub Releases と Samsung Galaxy Store へ同一署名APKを配布する手順を追加
 
 ## v0.4.1
 - Android StudioのGradle JVM 11問題を対策
