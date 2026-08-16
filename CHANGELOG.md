@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.0.0
+- 初回正式リリース版へ移行
+- Android app version 1.0.0 / versionCode 7
+- GitHub / Galaxy Store 配布を見据えた公開構成を採用
+- Dify 必須構成、暗号化保存、バックグラウンド送信、AdMob Release設定を維持
+
 ## v0.4.1
 - Android StudioのGradle JVM 11問題を対策
 - `.idea/gradle.xml` に `#GRADLE_LOCAL_JAVA_HOME` を設定
