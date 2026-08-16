@@ -3,7 +3,7 @@ name: Extract Dify DSL
 on:
   push:
     paths:
-      - 'dify/MemoBrain-v0.2.2-DifyPatch.zip'
+      - 'dify/bootstrap/**'
       - '.github/workflows/extract-dify.yml'
   workflow_dispatch:
 
@@ -17,17 +17,39 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Rebuild Dify package from bootstrap parts
+        run: |
+          cat \
+            dify/bootstrap/MemoBrain-v0.2.2-DifyPatch.zip.b64.part1 \
+            dify/bootstrap/MemoBrain-v0.2.2-DifyPatch.zip.b64.part2 \
+            dify/bootstrap/MemoBrain-v0.2.2-DifyPatch.zip.b64.part3 \
+            | tr -d '\r\n' \
+            | base64 -d \
+            > dify/MemoBrain-v0.2.2-DifyPatch.zip
+          unzip -t dify/MemoBrain-v0.2.2-DifyPatch.zip
+
       - name: Extract public Dify package
         run: unzip -o dify/MemoBrain-v0.2.2-DifyPatch.zip -d dify
 
-      - name: Commit extracted DSL if changed
+      - name: Verify published DSL contains no project-specific production URL
+        run: |
+          if grep -R -n -E 'api-dify\.automationse\.net|dify\.automationse\.net' \
+              dify/MemoBrain_DifyOnly_v0.2.2.yml; then
+            echo 'Production-specific Dify URL detected.' >&2
+            exit 1
+          fi
+
+      - name: Commit rebuilt package and extracted DSL
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add dify/MemoBrain_DifyOnly_v0.2.2.yml dify/MemoBrain-v0.2.2-README.txt
+          git add \
+            dify/MemoBrain-v0.2.2-DifyPatch.zip \
+            dify/MemoBrain_DifyOnly_v0.2.2.yml \
+            dify/MemoBrain-v0.2.2-README.txt
           if git diff --cached --quiet; then
-            echo "No extracted Dify changes."
+            echo "No Dify changes."
           else
-            git commit -m "chore: publish extracted Dify DSL"
+            git commit -m "chore: publish validated Dify workflow sources"
             git push
           fi
