@@ -29,7 +29,7 @@ MemoBrain/
 ## クイックスタート
 
 1. Dify を用意します。
-2. `dify/MemoBrain_DifyOnly_v0.3.3.yml` を Dify にインポートします。ナレッジ不足時のWeb検索を使う場合は、Dify Marketplaceから DuckDuckGo Search プラグインを追加します。
+2. `dify/MemoBrain_DifyOnly_v0.3.4.yml` を Dify にインポートします。Gemini公式Difyプラグイン `0.9.5` 以降が必要です。DuckDuckGo Searchプラグインは不要です。
 3. Dify 側の環境変数 `DIFY_API_BASE`、`KNOWLEDGE_API_KEY`、`DATASET_NAME` を設定します。
 4. MemoBrain の APK をインストールします。
 5. MemoBrain の「Dify接続設定」に Dify App API Base URL と App API Key を設定します。
@@ -40,7 +40,7 @@ MemoBrain/
 
 ## ナレッジ補完エージェント
 
-Dify DSL v0.3.3では、質問に対して既存Knowledgeを先に検索します。検索結果がないか関連度が低い場合、DuckDuckGo SearchでWebを検索し、参照URL付きの日本語記事へ整理して同じKnowledgeへ登録したうえで回答します。検索語句はDuckDuckGoプラグインへ、検索結果と生成対象は設定したLLMへ送信されます。この外部検索はAIチャットから質問した場合にだけ動作し、Android共有による通常保存の経路は従来どおりです。
+Dify DSL v0.3.4では、質問に対して既存Knowledgeを先に検索します。検索結果がないか関連度が低い場合、GeminiのGoogle Search GroundingでWebを調査し、参照URL付きの日本語記事へ整理して同じKnowledgeへ登録したうえで回答します。DuckDuckGoプラグインには依存しません。検索語句と生成対象は利用者がDifyに設定したGeminiサービスへ送信され、Geminiの利用枠を消費します。この外部検索はAIチャットから質問した場合にだけ動作し、Android共有による通常保存の経路は従来どおりです。
 
 ### Geminiモデル自動切替
 

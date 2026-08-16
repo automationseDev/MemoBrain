@@ -12,12 +12,15 @@
 - [ ] 広告WebViewと利用者Dify WebViewが分離されている
 - [ ] 送信成功・最終失敗・24時間経過時の一時データ削除を確認
 
-## 2. Dify DSL v0.3.0
+## 2. Dify DSL v0.3.4
 
-- [ ] `MemoBrain_DifyOnly_v0.3.0.yml` をテスト環境へインポート
-- [ ] DuckDuckGo Searchプラグインをインストール
-- [ ] Knowledgeにある質問がWeb検索なしで回答される
-- [ ] Knowledgeにない質問がWeb検索・記事化・自動登録される
+- [ ] `MemoBrain_DifyOnly_v0.3.4.yml` をテスト環境へインポート
+- [ ] Gemini公式Difyプラグイン `0.9.5` 以降をインストール
+- [ ] DuckDuckGoノード・DuckDuckGo Searchプラグインへの依存がない
+- [ ] Knowledgeにある質問がGroundingなしで回答される
+- [ ] Knowledgeにない質問がGemini Groundingで調査・記事化・自動登録される
+- [ ] Gemini 3.6 Flash成功時に後続処理へ進む
+- [ ] 失敗時に3.6 Flash → 3.5 Flash → 2.5 Flashの順で切り替わる
 - [ ] 記事に参照URLが含まれる
 - [ ] 検索失敗時に秘密情報やサーバーレスポンス本文が表示されない
 

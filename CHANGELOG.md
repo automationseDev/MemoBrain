@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+
+- Dify DSL v0.3.4でDuckDuckGoを廃止し、Knowledge不足時のWeb検索・記事生成をGemini Google Search Groundingへ統合
 - Dify DSL v0.3.3でGemini成功時の接続ハンドルを`success-branch`から`source`へ修正
 - Dify DSL v0.3.2でGemini 3.6 Flash → 3.5 Flash → 2.5 Flashの自動フェイルオーバーを全LLM処理へ追加
 - Dify DSL v0.3.1でDuckDuckGo Queryの空入力とKnowledge該当なし時のWeb検索未実行を修正
