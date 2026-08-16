@@ -7,6 +7,7 @@ local.properties
 
 # Release secrets / signing
 release-secrets.properties
+signing-secrets.properties
 *.jks
 *.keystore
 *.pem
