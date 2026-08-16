@@ -8,7 +8,7 @@ MemoBrain は、Android の共有メニューから URL、YouTube、テキスト
 ## 配布方針
 
 - **GitHub Releases**: APK と Dify DSL のメイン配布先
-- **Samsung Galaxy Store**: 同じ applicationId / 同じ署名の正式 APK を掲載する予定
+- **Samsung Galaxy Store**: GitHub Releases と同じ applicationId / 同じ署名の正式 APK を掲載
 - Release ビルドの AdMob ID は利用者が変更できず、開発者のビルド時設定のみを使用
 
 ## リポジトリ構成
@@ -72,7 +72,17 @@ MEMOBRAIN_ADMOB_BANNER_ID=ca-app-pub-xxxxxxxxxxxxxxxx/xxxxxxxxxx
 
 ## Android ビルド
 
-Windows では `android/MemoBrainShare/Build-MemoBrainApk.cmd` を実行できます。展開場所に依存せず、JDK / Android SDK を自動探索し、必要なら Gradle 9.5.1 Wrapper を生成します。
+Debug APK は Windows で `android/MemoBrainShare/Build-MemoBrainApk.cmd` を実行できます。
+
+署名済み Release APK は、正式 AdMob ID と署名情報をローカル設定したうえで次を実行します。
+
+```text
+android/MemoBrainShare/Build-MemoBrainRelease.cmd
+```
+
+Release ビルドでは `signing-secrets.properties` から keystore path / password / alias / key password を読み込みます。秘密鍵やパスワードは GitHub にコミットしません。
+
+詳細は [署名済みRelease APKの作成](docs/RELEASE_SIGNING.md) を参照してください。
 
 Android Studio で開く場合は `android/MemoBrainShare` を直接 Open してください。
 
@@ -81,6 +91,7 @@ Android Studio で開く場合は `android/MemoBrainShare` を直接 Open して
 - Dify App API Key
 - Dify Knowledge Service API Key
 - `release-secrets.properties`
+- `signing-secrets.properties`
 - AdMob 本番 ID を含むローカル設定
 - `.jks` / `.keystore`
 - 署名パスワード
