@@ -1,0 +1,47 @@
+name: Android Debug Build
+
+on:
+  push:
+    paths:
+      - 'android/**'
+      - '.github/workflows/android-debug.yml'
+  pull_request:
+    paths:
+      - 'android/**'
+      - '.github/workflows/android-debug.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: android/MemoBrainShare
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle 9.5.1
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.5.1'
+
+      - name: Build debug APK
+        run: gradle --no-daemon :app:assembleDebug --stacktrace
+
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: MemoBrain-debug
+          path: android/MemoBrainShare/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
