@@ -8,21 +8,43 @@ fun quoted(value: String): String =
 val googleTestAppId = "ca-app-pub-3940256099942544~3347511713"
 val googleTestBannerId = "ca-app-pub-3940256099942544/6300978111"
 
-val secretFile = rootProject.file("release-secrets.properties")
-val releaseSecrets = Properties().apply {
-    if (secretFile.isFile) secretFile.inputStream().use { load(it) }
+fun loadProperties(fileName: String): Properties = Properties().apply {
+    val source = rootProject.file(fileName)
+    if (source.isFile) source.inputStream().use { load(it) }
 }
 
-fun releaseValue(name: String): String {
+val releaseSecrets = loadProperties("release-secrets.properties")
+val signingSecrets = loadProperties("signing-secrets.properties")
+
+fun secretValue(name: String, source: Properties): String {
     val projectValue = project.findProperty(name)?.toString()?.trim().orEmpty()
     if (projectValue.isNotEmpty()) return projectValue
-    val fileValue = releaseSecrets.getProperty(name)?.trim().orEmpty()
+
+    val fileValue = source.getProperty(name)?.trim().orEmpty()
     if (fileValue.isNotEmpty()) return fileValue
+
     return System.getenv(name)?.trim().orEmpty()
 }
 
-val releaseAdmobAppId = releaseValue("MEMOBRAIN_ADMOB_APP_ID")
-val releaseAdmobBannerId = releaseValue("MEMOBRAIN_ADMOB_BANNER_ID")
+val releaseAdmobAppId = secretValue("MEMOBRAIN_ADMOB_APP_ID", releaseSecrets)
+val releaseAdmobBannerId = secretValue("MEMOBRAIN_ADMOB_BANNER_ID", releaseSecrets)
+
+val releaseKeystorePath = secretValue("MEMOBRAIN_KEYSTORE_PATH", signingSecrets)
+val releaseKeystorePassword = secretValue("MEMOBRAIN_KEYSTORE_PASSWORD", signingSecrets)
+val releaseKeyAlias = secretValue("MEMOBRAIN_KEY_ALIAS", signingSecrets)
+val releaseKeyPassword = secretValue("MEMOBRAIN_KEY_PASSWORD", signingSecrets)
+val releaseSigningReady = listOf(
+    releaseKeystorePath,
+    releaseKeystorePassword,
+    releaseKeyAlias,
+    releaseKeyPassword
+).all { it.isNotEmpty() }
+
+val releaseKeystoreFile = if (releaseKeystorePath.isNotEmpty()) {
+    rootProject.file(releaseKeystorePath)
+} else {
+    null
+}
 
 android {
     namespace = "net.automationse.memobrainshare"
@@ -34,6 +56,17 @@ android {
         targetSdk = 36
         versionCode = 7
         versionName = "1.0.0"
+    }
+
+    signingConfigs {
+        if (releaseSigningReady) {
+            create("release") {
+                storeFile = releaseKeystoreFile
+                storePassword = releaseKeystorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
+            }
+        }
     }
 
     buildTypes {
@@ -48,6 +81,10 @@ android {
             manifestPlaceholders["ADMOB_APP_ID"] = appId
             buildConfigField("String", "ADMOB_BANNER_ID", quoted(bannerId))
             isMinifyEnabled = false
+
+            if (releaseSigningReady) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
     }
 
@@ -89,8 +126,39 @@ val validateReleaseAdMob by tasks.registering {
     }
 }
 
+val validateReleaseSigning by tasks.registering {
+    group = "verification"
+    description = "Fails release builds unless a complete local signing configuration is supplied."
+
+    doLast {
+        fun fail(message: String): Nothing = throw GradleException(message)
+
+        if (releaseKeystorePath.isEmpty()) {
+            fail("MEMOBRAIN_KEYSTORE_PATH is required for release builds. Use signing-secrets.properties or an environment/project property.")
+        }
+        if (releaseKeystorePassword.isEmpty()) {
+            fail("MEMOBRAIN_KEYSTORE_PASSWORD is required for release builds.")
+        }
+        if (releaseKeyAlias.isEmpty()) {
+            fail("MEMOBRAIN_KEY_ALIAS is required for release builds.")
+        }
+        if (releaseKeyPassword.isEmpty()) {
+            fail("MEMOBRAIN_KEY_PASSWORD is required for release builds.")
+        }
+        if (releaseKeystoreFile == null || !releaseKeystoreFile.isFile) {
+            fail("The configured MemoBrain keystore file does not exist: $releaseKeystorePath")
+        }
+    }
+}
+
+val validateReleaseConfig by tasks.registering {
+    group = "verification"
+    description = "Validates production AdMob IDs and release signing configuration."
+    dependsOn(validateReleaseAdMob, validateReleaseSigning)
+}
+
 tasks.matching { it.name == "assembleRelease" || it.name == "bundleRelease" }.configureEach {
-    dependsOn(validateReleaseAdMob)
+    dependsOn(validateReleaseConfig)
 }
 
 dependencies {
