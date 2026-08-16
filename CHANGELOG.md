@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+- AIチャット画面を広告用WebViewと利用者Dify用WebViewへ分離
+- 利用者のDify Web App URLを広告ページへ送信しない構成へ変更
+- `web/memobrain-chat/` を広告・案内専用の `web/memobrain-ad/` へ置換
+- AdSense設定はGit管理外の `web/memobrain-ad/config.js` に限定
+
 ## v1.0.0
 - 初回正式リリース版へ移行
 - Android app version 1.0.0 / versionCode 7

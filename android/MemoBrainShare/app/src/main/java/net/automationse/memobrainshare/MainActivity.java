@@ -99,7 +99,7 @@ public class MainActivity extends Activity {
         root.addView(privacy);
 
         TextView webAds = new TextView(this);
-        webAds.setText("広告を表示する場合は、AIチャット画面で開くWebページ内のAdSenseを使用します。アプリ本体にはネイティブ広告を表示しません。");
+        webAds.setText("AIチャット画面では、開発者管理の案内・AdSenseページと、利用者が設定したDifyを別々のWebViewで表示します。利用者のDify URLは広告ページへ送信しません。");
         webAds.setPadding(0, dp(10), 0, 0);
         root.addView(webAds);
 
@@ -207,7 +207,7 @@ public class MainActivity extends Activity {
     private void openChat() {
         String chatUrl = prefs.getChatWebUrl();
         if (chatUrl.isEmpty() || !chatUrl.toLowerCase(Locale.ROOT).startsWith("https://")) {
-            Toast.makeText(this, "Dify接続設定でAIチャット Web URLを登録してください", Toast.LENGTH_LONG).show();
+            Toast.makeText(this, "Dify接続設定でDify Web App URLを登録してください", Toast.LENGTH_LONG).show();
             connectionSettings();
             return;
         }
@@ -273,7 +273,7 @@ public class MainActivity extends Activity {
 
     private void connectionSettings() {
         final TextView explain = new TextView(this);
-        explain.setText("本アプリの利用にはDifyが必須です。共有内容はここで指定したDifyへ送信されます。API BaseとAPI Key、AIチャット Web URLは端末内で暗号化して保存し、APKには含めません。AdSenseを使う場合は、AIチャット Web URLにDifyを埋め込んだ自分のHTTPSページを指定してください。");
+        explain.setText("本アプリの利用にはDifyが必須です。共有内容はここで指定したDifyへ送信されます。API Base、API Key、Dify Web App URLは端末内で暗号化して保存し、広告ページへは送信しません。");
         explain.setPadding(0, 0, 0, dp(16));
 
         final EditText base = new EditText(this);
@@ -291,7 +291,7 @@ public class MainActivity extends Activity {
         if (Build.VERSION.SDK_INT >= 26) key.setImportantForAutofill(View.IMPORTANT_FOR_AUTOFILL_NO_EXCLUDE_DESCENDANTS);
 
         final EditText chatWebUrl = new EditText(this);
-        chatWebUrl.setHint("AIチャット Web URL（任意・HTTPS）");
+        chatWebUrl.setHint("Dify Web App URL（任意・HTTPS）");
         chatWebUrl.setText(prefs.getChatWebUrl());
         chatWebUrl.setSingleLine(true);
         chatWebUrl.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_URI);
@@ -327,7 +327,7 @@ public class MainActivity extends Activity {
                     return;
                 }
                 if (!chatWebValue.isEmpty() && !chatWebValue.toLowerCase(Locale.ROOT).startsWith("https://")) {
-                    chatWebUrl.setError("HTTPSのWeb URLを入力してください");
+                    chatWebUrl.setError("HTTPSのDify Web App URLを入力してください");
                     return;
                 }
                 try {
@@ -345,7 +345,7 @@ public class MainActivity extends Activity {
             dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener(v ->
                     new AlertDialog.Builder(this)
                             .setTitle("接続情報を削除")
-                            .setMessage("端末に保存されているDify API Base、API Key、AIチャット Web URLを削除します。")
+                            .setMessage("端末に保存されているDify API Base、API Key、Dify Web App URLを削除します。")
                             .setPositiveButton("削除", (d, w) -> {
                                 prefs.clearConnection();
                                 base.setText("");

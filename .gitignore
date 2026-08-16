@@ -31,4 +31,4 @@ Thumbs.db
 !.env.example
 
 # Local WebView deployment config
-web/memobrain-chat/config.js
+web/memobrain-ad/config.js

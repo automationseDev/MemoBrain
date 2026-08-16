@@ -9,7 +9,7 @@ MemoBrain は、Android の共有メニューから URL、YouTube、テキスト
 
 - **GitHub Releases**: APK と Dify DSL のメイン配布先
 - Android のネイティブ AdMob バナーは使用しない
-- 広告を利用する場合は、AIチャット用のHTTPS Webページ内に AdSense を配置する
+- 広告は開発者管理の案内用HTTPS WebViewに表示し、利用者のDifyは別WebViewで直接開く
 - AdSense Publisher / Slot ID は Android APK へ埋め込まず、Webサーバー側だけで設定できる
 
 ## リポジトリ構成
@@ -18,7 +18,7 @@ MemoBrain は、Android の共有メニューから URL、YouTube、テキスト
 MemoBrain/
 ├─ android/MemoBrainShare/       Android アプリソース
 ├─ dify/                         Dify DSL 配布パッケージ
-├─ web/memobrain-chat/           Dify埋め込み / AdSense用Webページ
+├─ web/memobrain-ad/             案内 / AdSense専用Webページ
 ├─ docs/                         導入・公開・プライバシー資料
 ├─ scripts/                      Dify 疎通確認ツール
 ├─ .gitignore
@@ -33,7 +33,7 @@ MemoBrain/
 3. Dify 側の環境変数 `DIFY_API_BASE`、`KNOWLEDGE_API_KEY`、`DATASET_NAME` を設定します。
 4. MemoBrain の APK をインストールします。
 5. MemoBrain の「Dify接続設定」に Dify App API Base URL と App API Key を設定します。
-6. 必要に応じて、Dify公開Web Appまたは `web/memobrain-chat/` を配備したHTTPS URLを `AIチャット Web URL` に設定します。
+6. 利用者自身のDify公開Web App URLを `Dify Web App URL` に設定します。広告ページへDify URLは送信されません。
 7. Android の共有メニューから MemoBrain を選択して保存します。
 
 詳細は [Difyセットアップ](docs/DIFY_SETUP.md)、[Android導入手順](docs/INSTALL_ANDROID.md)、[Dify Web Chat / AdSense](docs/DIFY_WEB_CHAT.md) を参照してください。
@@ -48,7 +48,7 @@ MemoBrain/
 
 ## プライバシー設計
 
-- Dify 接続 URL / App API Key / AIチャットWeb URL は Android Keystore を利用して暗号化保存
+- Dify 接続 URL / App API Key / Dify Web App URL は Android Keystore を利用して暗号化保存
 - 送信待ちテキスト・共有ファイルはアプリ専用領域で AES-GCM 暗号化
 - 送信成功または最終失敗後に送信待ちデータを削除
 - 未送信データも最大24時間で削除
@@ -66,18 +66,17 @@ MemoBrain/
 
 MemoBrain はネイティブ AdMob バナーを使用しません。Google Mobile Ads SDK は `MobileAds.registerWebView()` による WebView API for Ads のためだけに残しています。
 
-広告を利用する場合は `web/memobrain-chat/` をHTTPSで配備し、サーバー上だけに置く `config.js` にDify Web App URLと必要なAdSense値を設定します。
+広告は `web/memobrain-ad/` をHTTPSで配備した開発者管理WebViewに表示します。利用者自身のDify公開Web Appは別WebViewで直接開くため、Dify URLが広告ページへ送信されることはありません。
 
 ```javascript
-window.MEMOBRAIN_CHAT_CONFIG = {
-  difyWebAppUrl: "https://your-dify.example.com/chat/replace-me",
+window.MEMOBRAIN_AD_CONFIG = {
   adsenseClient: "ca-pub-...",
   adsenseSlot: "...",
   showAdPlaceholder: false
 };
 ```
 
-`config.js` は `.gitignore` 対象です。広告IDをAndroidビルド時に教えたり、APKへ埋め込んだりする必要はありません。
+`config.js` は `.gitignore` 対象です。広告IDをAPKへ埋め込む必要はなく、Dify URLを `config.js` に設定してはいけません。
 
 ## Android ビルド
 
@@ -100,7 +99,7 @@ Android Studio で開く場合は `android/MemoBrainShare` を直接 Open して
 - Dify App API Key
 - Dify Knowledge Service API Key
 - `signing-secrets.properties`
-- `web/memobrain-chat/config.js`
+- `web/memobrain-ad/config.js`
 - `.jks` / `.keystore`
 - 署名パスワード
 - `local.properties`

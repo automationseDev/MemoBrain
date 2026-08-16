@@ -30,11 +30,14 @@ import java.util.Locale;
 
 public class ChatActivity extends Activity {
     private static final int FILE_CHOOSER_REQUEST = 6001;
+    private static final String AD_CONTENT_URL = "https://automationse.net/memobrain-ad/";
 
-    private WebView webView;
+    private WebView adWebView;
+    private WebView difyWebView;
     private ProgressBar progress;
     private ValueCallback<Uri[]> fileUploadCallback;
-    private String allowedHost = "";
+    private String difyAllowedHost = "";
+    private String adAllowedHost = "";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -42,18 +45,21 @@ public class ChatActivity extends Activity {
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);
 
         SecurePrefs prefs = new SecurePrefs(this);
-        String url = prefs.getChatWebUrl();
-        if (!isHttpsUrl(url)) {
-            Toast.makeText(this, "AIチャット Web URL をDify接続設定から登録してください", Toast.LENGTH_LONG).show();
+        String difyUrl = prefs.getChatWebUrl();
+        if (!isHttpsUrl(difyUrl)) {
+            Toast.makeText(this, "Dify Web App URL をDify接続設定から登録してください", Toast.LENGTH_LONG).show();
             finish();
             return;
         }
 
-        Uri initialUri = Uri.parse(url);
-        allowedHost = initialUri.getHost() == null ? "" : initialUri.getHost().toLowerCase(Locale.ROOT);
+        difyAllowedHost = normalizedHost(Uri.parse(difyUrl));
+        adAllowedHost = normalizedHost(Uri.parse(AD_CONTENT_URL));
         buildUi();
-        configureWebView();
-        webView.loadUrl(url);
+        configureAdWebView();
+        configureDifyWebView();
+
+        adWebView.loadUrl(AD_CONTENT_URL);
+        difyWebView.loadUrl(difyUrl);
     }
 
     private void buildUi() {
@@ -87,7 +93,8 @@ public class ChatActivity extends Activity {
         reload.setMinHeight(dp(48));
         reload.setPadding(dp(12), 0, dp(12), 0);
         reload.setOnClickListener(v -> {
-            if (webView != null) webView.reload();
+            if (adWebView != null) adWebView.reload();
+            if (difyWebView != null) difyWebView.reload();
         });
         header.addView(reload, new LinearLayout.LayoutParams(-2, -2));
 
@@ -98,8 +105,11 @@ public class ChatActivity extends Activity {
         progress.setVisibility(View.GONE);
         root.addView(progress, new LinearLayout.LayoutParams(-1, dp(3)));
 
-        webView = new WebView(this);
-        root.addView(webView, new LinearLayout.LayoutParams(-1, 0, 1f));
+        adWebView = new WebView(this);
+        root.addView(adWebView, new LinearLayout.LayoutParams(-1, dp(210)));
+
+        difyWebView = new WebView(this);
+        root.addView(difyWebView, new LinearLayout.LayoutParams(-1, 0, 1f));
 
         applySystemBarInsets(root, header);
         setContentView(root);
@@ -133,29 +143,46 @@ public class ChatActivity extends Activity {
         return Math.round(value * getResources().getDisplayMetrics().density);
     }
 
-    private void configureWebView() {
-        WebSettings settings = webView.getSettings();
+    private void applyBaseSettings(WebView view, boolean allowContentAccess) {
+        WebSettings settings = view.getSettings();
         settings.setJavaScriptEnabled(true);
         settings.setDomStorageEnabled(true);
         settings.setMediaPlaybackRequiresUserGesture(false);
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
         settings.setAllowFileAccess(false);
-        settings.setAllowContentAccess(true);
+        settings.setAllowContentAccess(allowContentAccess);
         settings.setJavaScriptCanOpenWindowsAutomatically(false);
         settings.setSupportMultipleWindows(false);
 
         CookieManager cookies = CookieManager.getInstance();
         cookies.setAcceptCookie(true);
-        cookies.setAcceptThirdPartyCookies(webView, true);
+        cookies.setAcceptThirdPartyCookies(view, true);
+    }
 
+    private void configureAdWebView() {
+        applyBaseSettings(adWebView, false);
+
+        // Only the publisher-owned WebView contains AdSense. The user's Dify
+        // URL is loaded by a separate WebView and is never sent to this page.
+        MobileAds.registerWebView(adWebView);
+
+        adWebView.setWebViewClient(new WebViewClient() {
+            @Override
+            public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+                if (!request.isForMainFrame()) return false;
+                Uri uri = request.getUrl();
+                if (isAllowedHttpsHost(uri, adAllowedHost)) return false;
+                openExternal(uri);
+                return true;
+            }
+        });
+    }
+
+    private void configureDifyWebView() {
+        applyBaseSettings(difyWebView, true);
         WebView.setWebContentsDebuggingEnabled(BuildConfig.DEBUG);
 
-        // This app has no native AdMob banner. The SDK is retained only for
-        // Google's WebView API for Ads so AdSense/GPT tags inside the loaded
-        // publisher-owned HTTPS page can receive supported app signals.
-        MobileAds.registerWebView(webView);
-
-        webView.setWebViewClient(new WebViewClient() {
+        difyWebView.setWebViewClient(new WebViewClient() {
             @Override
             public void onPageStarted(WebView view, String url, Bitmap favicon) {
                 progress.setVisibility(View.VISIBLE);
@@ -170,13 +197,13 @@ public class ChatActivity extends Activity {
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 if (!request.isForMainFrame()) return false;
                 Uri uri = request.getUrl();
-                if (isAllowedMainFrame(uri)) return false;
+                if (isAllowedHttpsHost(uri, difyAllowedHost)) return false;
                 openExternal(uri);
                 return true;
             }
         });
 
-        webView.setWebChromeClient(new WebChromeClient() {
+        difyWebView.setWebChromeClient(new WebChromeClient() {
             @Override
             public void onProgressChanged(WebView view, int newProgress) {
                 progress.setProgress(newProgress);
@@ -188,13 +215,10 @@ public class ChatActivity extends Activity {
                     WebView webView,
                     ValueCallback<Uri[]> filePathCallback,
                     FileChooserParams fileChooserParams) {
-                if (fileUploadCallback != null) {
-                    fileUploadCallback.onReceiveValue(null);
-                }
+                if (fileUploadCallback != null) fileUploadCallback.onReceiveValue(null);
                 fileUploadCallback = filePathCallback;
                 try {
-                    Intent chooser = fileChooserParams.createIntent();
-                    startActivityForResult(chooser, FILE_CHOOSER_REQUEST);
+                    startActivityForResult(fileChooserParams.createIntent(), FILE_CHOOSER_REQUEST);
                     return true;
                 } catch (ActivityNotFoundException e) {
                     fileUploadCallback = null;
@@ -205,13 +229,15 @@ public class ChatActivity extends Activity {
         });
     }
 
-    private boolean isAllowedMainFrame(Uri uri) {
-        if (uri == null) return false;
-        String scheme = uri.getScheme();
-        if (scheme == null || !"https".equalsIgnoreCase(scheme)) return false;
-        String host = uri.getHost();
-        if (host == null) return false;
-        return allowedHost.isEmpty() || allowedHost.equals(host.toLowerCase(Locale.ROOT));
+    private String normalizedHost(Uri uri) {
+        if (uri == null || uri.getHost() == null) return "";
+        return uri.getHost().toLowerCase(Locale.ROOT);
+    }
+
+    private boolean isAllowedHttpsHost(Uri uri, String allowedHost) {
+        if (uri == null || !"https".equalsIgnoreCase(uri.getScheme())) return false;
+        String host = normalizedHost(uri);
+        return !host.isEmpty() && !allowedHost.isEmpty() && allowedHost.equals(host);
     }
 
     private boolean isHttpsUrl(String value) {
@@ -246,11 +272,8 @@ public class ChatActivity extends Activity {
     @Override
     @SuppressWarnings("deprecation")
     public void onBackPressed() {
-        if (webView != null && webView.canGoBack()) {
-            webView.goBack();
-        } else {
-            super.onBackPressed();
-        }
+        if (difyWebView != null && difyWebView.canGoBack()) difyWebView.goBack();
+        else super.onBackPressed();
     }
 
     @Override
@@ -259,15 +282,20 @@ public class ChatActivity extends Activity {
             fileUploadCallback.onReceiveValue(null);
             fileUploadCallback = null;
         }
-        if (webView != null) {
-            webView.stopLoading();
-            webView.setWebChromeClient(null);
-            webView.setWebViewClient(null);
-            webView.loadUrl("about:blank");
-            webView.clearHistory();
-            webView.destroy();
-            webView = null;
-        }
+        destroyWebView(adWebView);
+        destroyWebView(difyWebView);
+        adWebView = null;
+        difyWebView = null;
         super.onDestroy();
+    }
+
+    private void destroyWebView(WebView view) {
+        if (view == null) return;
+        view.stopLoading();
+        view.setWebChromeClient(null);
+        view.setWebViewClient(null);
+        view.loadUrl("about:blank");
+        view.clearHistory();
+        view.destroy();
     }
 }
