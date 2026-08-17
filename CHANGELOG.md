@@ -1,5 +1,12 @@
 # Changelog
 
+## Develop
+
+- 正式版と共存できる `net.automationse.memobrainshare.dev` のDebugビルドを追加
+- クイックメモ、ファイル、AIチャット、履歴を開ける4×2ホーム画面ウィジェットを追加
+- ウィジェットへ送信待ち・失敗・最新送信状態を表示
+- ライト／ダークテーマ対応の角丸カードUIを追加
+
 ## v1.2.0 - 2026-08-17
 
 - Android app version 1.2.0 / versionCode 9（同一applicationId・同一署名で更新可能）

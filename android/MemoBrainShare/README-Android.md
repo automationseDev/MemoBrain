@@ -36,6 +36,19 @@ WebView API for Ads はネイティブアプリ側の同意状態をWeb広告へ
 端末内の一時データを残しにくくする設計ですが、MemoBrain の目的上、ユーザーが保存した内容は **設定した Dify に送信されます**。
 Dify の Knowledge、利用するLLM/プラグイン、ログ、バックアップ等にどの程度データが残るかは、利用者自身の Dify 構成と各サービスのポリシーに依存します。
 
+## Develop版とホーム画面ウィジェット
+
+Debugビルドは `net.automationse.memobrainshare.dev`、表示名「MemoBrain Develop」として生成されます。正式版とは別アプリとして同時にインストールでき、接続設定・履歴・ウィジェットも分離されます。
+
+4×2のホーム画面ウィジェットから次を実行できます。
+
+- クイックメモ入力
+- ファイル選択
+- Dify AIチャット
+- 送信履歴と状態確認
+
+ウィジェットはライト／ダークテーマへ対応します。
+
 ## Debug APK のビルド
 
 ZIPは好きな場所へ展開できます。
@@ -55,7 +68,7 @@ DebugビルドにもネイティブAdMob IDは不要です。
 生成先:
 
 ```text
-MemoBrainShare\output\MemoBrain-v1.2.0-debug.apk
+MemoBrainShare\output\MemoBrain-v1.2.0-develop-debug.apk
 ```
 
 ## 署名済み Release APK

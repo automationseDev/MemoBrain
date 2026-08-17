@@ -42,6 +42,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 public class MainActivity extends Activity {
+    private static final int REQUEST_WIDGET_FILE = 6201;
+
     private TextView status;
     private TextView preview;
     private EditText note;
@@ -62,6 +64,7 @@ public class MainActivity extends Activity {
         buildUi();
         requestNotificationPermissionIfNeeded();
         handle(getIntent());
+        handleWidgetAction(getIntent());
         stagingExecutor.execute(() -> PendingJobStore.cleanupExpired(getApplicationContext()));
     }
 
@@ -70,6 +73,26 @@ public class MainActivity extends Activity {
         super.onNewIntent(i);
         setIntent(i);
         handle(i);
+        handleWidgetAction(i);
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode != REQUEST_WIDGET_FILE || resultCode != RESULT_OK || data == null) return;
+        Uri selected = data.getData();
+        if (selected == null) return;
+        try {
+            getContentResolver().takePersistableUriPermission(selected,
+                    data.getFlags() & Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        } catch (Exception ignored) {}
+        uris.clear();
+        uris.add(selected);
+        sharedText = "";
+        String selectedMime = getContentResolver().getType(selected);
+        mime = selectedMime == null ? "application/octet-stream" : selectedMime;
+        renderPreview();
+        status.setText("ファイルを選択しました。必要なら補足メモを入力して保存してください。");
     }
 
     @Override
@@ -190,13 +213,38 @@ public class MainActivity extends Activity {
             if (a != null) uris.addAll(a);
         }
 
-        String visible = sharedText;
-        if (visible.length() > 500) visible = visible.substring(0, 500) + "…";
-
-        preview.setText("種類: " + (mime.isEmpty() ? "テキスト" : mime)
-                + "\nファイル: " + uris.size() + "件\n\n" + visible);
+        renderPreview();
         status.setText(prefs.isConfigured() ? "" : "Dify接続設定が必要です。");
         sendButton.setEnabled(true);
+    }
+
+    private void renderPreview() {
+        String visible = sharedText == null ? "" : sharedText;
+        if (visible.length() > 500) visible = visible.substring(0, 500) + "…";
+        preview.setText("種類: " + (mime.isEmpty() ? "テキスト" : mime)
+                + "\nファイル: " + uris.size() + "件\n\n" + visible);
+    }
+
+    private void handleWidgetAction(Intent intent) {
+        if (intent == null) return;
+        String action = intent.getStringExtra(MemoBrainWidget.EXTRA_ACTION);
+        if (action == null || action.isEmpty()) return;
+        intent.removeExtra(MemoBrainWidget.EXTRA_ACTION);
+
+        if (MemoBrainWidget.ACTION_MEMO.equals(action)) {
+            note.requestFocus();
+            getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE);
+        } else if (MemoBrainWidget.ACTION_FILE.equals(action)) {
+            Intent picker = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+            picker.addCategory(Intent.CATEGORY_OPENABLE);
+            picker.setType("*/*");
+            picker.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
+            startActivityForResult(picker, REQUEST_WIDGET_FILE);
+        } else if (MemoBrainWidget.ACTION_CHAT.equals(action)) {
+            openChat();
+        } else if (MemoBrainWidget.ACTION_HISTORY.equals(action)) {
+            showHistory();
+        }
     }
 
     private String marker() {

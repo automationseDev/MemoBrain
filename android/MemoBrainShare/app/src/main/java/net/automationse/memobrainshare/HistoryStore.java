@@ -43,6 +43,7 @@ public final class HistoryStore {
             history.put(item);
             writeInternal(context, prune(history));
         }
+        MemoBrainWidget.updateAll(context);
     }
 
     public static void updateStatus(Context context, String jobId, String status) {
@@ -62,6 +63,7 @@ public final class HistoryStore {
                 // History must never make the actual save fail.
             }
         }
+        MemoBrainWidget.updateAll(context);
     }
 
     public static JSONArray list(Context context) {
@@ -103,6 +105,7 @@ public final class HistoryStore {
             File file = file(context);
             if (file.exists()) file.delete();
         }
+        MemoBrainWidget.updateAll(context);
     }
 
     private static JSONArray readInternal(Context context) throws Exception {

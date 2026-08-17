@@ -101,6 +101,18 @@ window.MEMOBRAIN_AD_CONFIG = {
 
 `config.js` は `.gitignore` 対象です。広告IDをAPKへ埋め込む必要はなく、Dify URLを `config.js` に設定してはいけません。
 
+## Develop版
+
+Debug APKは正式版と競合しない開発専用パッケージです。
+
+- applicationId: `net.automationse.memobrainshare.dev`
+- アプリ名: `MemoBrain Develop`
+- versionName: `1.2.0-develop`
+- 正式版と同時インストール可能
+- 4×2のモダンなホーム画面ウィジェットを利用可能
+
+ReleaseビルドのapplicationIdは従来どおり `net.automationse.memobrainshare` です。
+
 ## Android ビルド
 
 Debug APK は Windows で `android/MemoBrainShare/Build-MemoBrainApk.cmd` を実行できます。
