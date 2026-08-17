@@ -11,7 +11,7 @@ MemoBrain Share は、Android の共有メニューからテキスト・URL・�
 - Dify接続情報は Android Keystore を利用して端末内で暗号化
 - 共有テキスト・添付ファイルはバックグラウンド送信待ちの間だけアプリ専用領域へ AES-GCM 暗号化して保存
 - 送信時のみ `cacheDir` に復号し、アップロード直後に削除
-- 送信成功または最終失敗時に暗号化キューを削除
+- 送信成功時に暗号化キューを削除し、最終失敗時は手動再送のため最大24時間だけ保持
 - ネットワークが戻らない場合も最大24時間で送信待ちデータを削除する Cleanup Worker を登録
 - Androidバックアップ / 端末移行バックアップを無効化
 - HTTP平文通信を禁止し、Dify API Base / Dify Web App URL は HTTPS のみ許可
@@ -55,7 +55,7 @@ DebugビルドにもネイティブAdMob IDは不要です。
 生成先:
 
 ```text
-MemoBrainShare\output\MemoBrain-v1.1.0-debug.apk
+MemoBrainShare\output\MemoBrain-v1.2.0-debug.apk
 ```
 
 ## 署名済み Release APK
@@ -90,7 +90,7 @@ MemoBrainShare\Build-MemoBrainRelease.cmd
 成功すると:
 
 ```text
-MemoBrainShare\output\MemoBrain-v1.1.0-release.apk
+MemoBrainShare\output\MemoBrain-v1.2.0-release.apk
 MemoBrainShare\output\SHA256SUMS.txt
 ```
 
@@ -128,6 +128,14 @@ Releaseビルドでは以下の場合にビルドを停止します。
 7. `MemoBrainに保存` を押す
 
 接続設定は端末内で暗号化され、削除ボタンから消去できます。
+
+## 送信履歴・再送・重複防止
+
+- 送信履歴画面で、送信待ち・送信中・成功・失敗・期限切れを確認できます。
+- 最終失敗した送信は、暗号化済み送信データが残っている24時間以内に再送できます。
+- 履歴はAndroid Keystoreを利用して暗号化し、本文、URL、ファイル名、Difyレスポンスは保存しません。
+- 正規化したURLとファイル内容のSHA-256を使い、履歴にある同一URL・同一ファイルの重複登録を止めます。
+- 履歴は最大100件・30日間です。履歴を消去すると重複判定情報も消去されます。
 
 ## Gradle / JDK
 

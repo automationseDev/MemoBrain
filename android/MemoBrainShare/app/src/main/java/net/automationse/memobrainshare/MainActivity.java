@@ -30,7 +30,12 @@ import androidx.work.NetworkType;
 import androidx.work.OneTimeWorkRequest;
 import androidx.work.WorkManager;
 
+import org.json.JSONArray;
+import org.json.JSONObject;
+
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -94,7 +99,7 @@ public class MainActivity extends Activity {
         root.addView(required);
 
         TextView privacy = new TextView(this);
-        privacy.setText("端末内の送信待ちデータはアプリ専用領域で暗号化し、送信完了・最終失敗時に削除します。未送信でも最大24時間で削除します。バックアップも無効です。");
+        privacy.setText("端末内の送信待ちデータは暗号化します。成功時に削除し、失敗時は再送用として最大24時間だけ保持します。履歴に本文やファイル名は保存しません。");
         privacy.setPadding(0, dp(10), 0, 0);
         root.addView(privacy);
 
@@ -117,6 +122,11 @@ public class MainActivity extends Activity {
         sendButton.setText("MemoBrainに保存（バックグラウンド）");
         sendButton.setOnClickListener(v -> enqueueSave());
         root.addView(sendButton);
+
+        Button history = new Button(this);
+        history.setText("送信履歴・失敗した送信の再送");
+        history.setOnClickListener(v -> showHistory());
+        root.addView(history);
 
         Button chat = new Button(this);
         chat.setText("Dify AIチャットを開く");
@@ -246,24 +256,7 @@ public class MainActivity extends Activity {
         stagingExecutor.execute(() -> {
             try {
                 String jobId = PendingJobStore.create(this, q, snapshotUris, snapshotMime);
-                Constraints constraints = new Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build();
-                Data input = new Data.Builder().putString(MemoSaveWorker.KEY_JOB_ID, jobId).build();
-                OneTimeWorkRequest request = new OneTimeWorkRequest.Builder(MemoSaveWorker.class)
-                        .setInputData(input)
-                        .setConstraints(constraints)
-                        .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
-                        .addTag("memobrain-save")
-                        .build();
-
-                WorkManager wm = WorkManager.getInstance(getApplicationContext());
-                wm.enqueueUniqueWork("memobrain-save-" + jobId, ExistingWorkPolicy.KEEP, request);
-
-                OneTimeWorkRequest cleanup = new OneTimeWorkRequest.Builder(MemoCleanupWorker.class)
-                        .setInputData(input)
-                        .setInitialDelay(PendingJobStore.MAX_RETENTION_MILLIS, TimeUnit.MILLISECONDS)
-                        .addTag("memobrain-cleanup")
-                        .build();
-                wm.enqueueUniqueWork("memobrain-cleanup-" + jobId, ExistingWorkPolicy.REPLACE, cleanup);
+                MemoWorkScheduler.enqueue(getApplicationContext(), jobId, ExistingWorkPolicy.KEEP);
 
                 runOnUiThread(() -> {
                     status.setText("保存キューに登録しました。別アプリへ移動してOKです。");
@@ -275,10 +268,90 @@ public class MainActivity extends Activity {
             } catch (Exception e) {
                 runOnUiThread(() -> {
                     sendButton.setEnabled(true);
-                    status.setText("保存準備に失敗しました。共有元またはDify接続設定を確認してください。");
+                    if (e instanceof PendingJobStore.DuplicateException) {
+                        status.setText("同じURLまたはファイルが送信履歴にあるため、重複登録を止めました。");
+                        Toast.makeText(this, "重複するURLまたはファイルです", Toast.LENGTH_LONG).show();
+                    } else {
+                        status.setText("保存準備に失敗しました。共有元またはDify接続設定を確認してください。");
+                    }
                 });
             }
         });
+    }
+
+    private void showHistory() {
+        JSONArray items = HistoryStore.list(this);
+        LinearLayout list = new LinearLayout(this);
+        list.setOrientation(LinearLayout.VERTICAL);
+        list.setPadding(dp(20), dp(8), dp(20), dp(8));
+
+        if (items.length() == 0) {
+            TextView empty = new TextView(this);
+            empty.setText("送信履歴はありません。");
+            list.addView(empty);
+        } else {
+            SimpleDateFormat format = new SimpleDateFormat("MM/dd HH:mm", Locale.JAPAN);
+            for (int i = 0; i < items.length(); i++) {
+                JSONObject item = items.optJSONObject(i);
+                if (item == null) continue;
+                String jobId = item.optString("job_id");
+                String itemStatus = item.optString("status");
+                String kind = item.optString("kind", "TEXT");
+                long createdAt = item.optLong("created_at");
+
+                TextView row = new TextView(this);
+                row.setText(format.format(new Date(createdAt)) + "  " + kind + "  " + historyStatus(itemStatus));
+                row.setPadding(0, dp(10), 0, dp(4));
+                list.addView(row);
+
+                if (HistoryStore.FAILED.equals(itemStatus)) {
+                    Button retry = new Button(this);
+                    retry.setText("この送信を再試行");
+                    retry.setEnabled(PendingJobStore.exists(this, jobId));
+                    list.addView(retry);
+                    retry.setOnClickListener(v -> {
+                        if (!PendingJobStore.exists(this, jobId)) {
+                            HistoryStore.updateStatus(this, jobId, HistoryStore.EXPIRED);
+                            Toast.makeText(this, "再送期限が切れています", Toast.LENGTH_LONG).show();
+                            return;
+                        }
+                        HistoryStore.updateStatus(this, jobId, HistoryStore.QUEUED);
+                        MemoWorkScheduler.enqueue(this, jobId, ExistingWorkPolicy.REPLACE);
+                        Toast.makeText(this, "再送キューへ登録しました", Toast.LENGTH_SHORT).show();
+                    });
+                }
+            }
+        }
+
+        ScrollView scroll = new ScrollView(this);
+        scroll.addView(list);
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setTitle("送信履歴")
+                .setView(scroll)
+                .setPositiveButton("閉じる", null)
+                .setNeutralButton("履歴を消去", null)
+                .create();
+        dialog.setOnShowListener(ignored -> dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener(v ->
+                new AlertDialog.Builder(this)
+                        .setTitle("送信履歴を消去")
+                        .setMessage("重複判定に使う履歴も消去します。送信待ちデータは消去されず、24時間で自動削除されます。")
+                        .setPositiveButton("消去", (d, w) -> {
+                            HistoryStore.clear(this);
+                            dialog.dismiss();
+                            Toast.makeText(this, "送信履歴を消去しました", Toast.LENGTH_SHORT).show();
+                        })
+                        .setNegativeButton("キャンセル", null)
+                        .show()));
+        dialog.show();
+    }
+
+    private String historyStatus(String value) {
+        if (HistoryStore.QUEUED.equals(value)) return "送信待ち";
+        if (HistoryStore.SENDING.equals(value)) return "送信中";
+        if (HistoryStore.SUCCESS.equals(value)) return "成功";
+        if (HistoryStore.FAILED.equals(value)) return "失敗（再送可）";
+        if (HistoryStore.EXPIRED.equals(value)) return "期限切れ";
+        return value;
     }
 
     private void connectionSettings() {

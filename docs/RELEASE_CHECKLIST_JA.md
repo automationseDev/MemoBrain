@@ -3,22 +3,26 @@
 ## 1. アプリ
 
 - [ ] applicationIdが `net.automationse.memobrainshare` のまま
-- [ ] versionNameが `1.1.0`、versionCodeが `8` 以上
+- [ ] versionNameが `1.2.0`、versionCodeが `9` 以上
 - [ ] v1.0.0と同じ正式署名でAPKを生成
 - [ ] Dify接続先、API Key、広告IDがAPKに入っていない
 - [ ] テキスト/URL/画像/PDF/動画のバックグラウンド保存を確認
+- [ ] 送信履歴に本文・URL・ファイル名・Difyレスポンスが表示・保存されない
+- [ ] 最終失敗した送信を24時間以内に履歴から再送できる
+- [ ] 同一URL（追跡パラメータ違いを含む）と同一ファイルが重複登録されない
 - [ ] 完全な空入力がエラーになりKnowledgeへ登録されない
 - [ ] Difyチャット、ファイル添付、Android戻る操作を確認
 - [ ] 広告WebViewと利用者Dify WebViewが分離されている
-- [ ] 送信成功・最終失敗・24時間経過時の一時データ削除を確認
+- [ ] 送信成功時と24時間経過時の一時データ削除を確認
 
-## 2. Dify DSL v0.3.4
+## 2. Dify DSL v0.3.5
 
-- [ ] `MemoBrain_DifyOnly_v0.3.4.yml` をテスト環境へインポート
+- [ ] `MemoBrain_DifyOnly_v0.3.5.yml` をテスト環境へインポート
 - [ ] Gemini公式Difyプラグイン `0.9.5` 以降をインストール
 - [ ] DuckDuckGoノード・DuckDuckGo Searchプラグインへの依存がない
 - [ ] Knowledgeにある質問がGroundingなしで回答される
-- [ ] Knowledgeにない質問がGemini Groundingで調査・記事化・自動登録される
+- [ ] Knowledgeにない質問では確認メッセージを表示し、Groundingを実行しない
+- [ ] `Web調査: 調べたい内容` と送信した場合だけGemini Groundingで調査・記事化・自動登録される
 - [ ] Gemini 3.6 Flash成功時に後続処理へ進む
 - [ ] 失敗時に3.6 Flash → 3.5 Flash → 2.5 Flashの順で切り替わる
 - [ ] 記事に参照URLが含まれる

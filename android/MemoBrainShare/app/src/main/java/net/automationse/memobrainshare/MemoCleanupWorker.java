@@ -16,7 +16,8 @@ public class MemoCleanupWorker extends Worker {
     @Override
     public Result doWork() {
         String jobId = getInputData().getString(MemoSaveWorker.KEY_JOB_ID);
-        if (jobId != null && !jobId.trim().isEmpty()) {
+        if (jobId != null && !jobId.trim().isEmpty() && PendingJobStore.exists(getApplicationContext(), jobId)) {
+            HistoryStore.updateStatus(getApplicationContext(), jobId, HistoryStore.EXPIRED);
             PendingJobStore.delete(getApplicationContext(), jobId);
         }
         PendingJobStore.cleanupExpired(getApplicationContext());

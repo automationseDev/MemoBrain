@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Android app version 1.2.0 / versionCode 9（同一applicationId・同一署名で更新可能）
+- 暗号化した送信履歴、最終失敗時の24時間以内の手動再送を追加
+- 正規化URLとファイルSHA-256による重複登録防止を追加
+- Dify DSL v0.3.5でKnowledge不足時のWeb調査を明示確認式へ変更
+
 - Dify DSL v0.3.4でDuckDuckGoを廃止し、Knowledge不足時のWeb検索・記事生成をGemini Google Search Groundingへ統合
 - Dify DSL v0.3.3でGemini成功時の接続ハンドルを`success-branch`から`source`へ修正
 - Dify DSL v0.3.2でGemini 3.6 Flash → 3.5 Flash → 2.5 Flashの自動フェイルオーバーを全LLM処理へ追加
