@@ -115,7 +115,7 @@ Debug APKは正式版と競合しない開発専用パッケージです。
 - アプリ名: `MemoBrain Develop`
 - versionName: `1.2.0-develop`
 - 正式版と同時インストール可能
-- 4×2のモダンなホーム画面ウィジェットを利用可能
+- カード型のモダンな共有画面UIを利用可能
 
 ReleaseビルドのapplicationIdは従来どおり `net.automationse.memobrainshare` です。
 

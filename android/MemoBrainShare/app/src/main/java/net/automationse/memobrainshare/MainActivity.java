@@ -5,6 +5,10 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.content.res.Configuration;
+import android.graphics.Color;
+import android.graphics.Typeface;
+import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -46,8 +50,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 public class MainActivity extends Activity {
-    private static final int REQUEST_WIDGET_FILE = 6201;
-
     private TextView status;
     private TextView preview;
     private EditText note;
@@ -76,7 +78,6 @@ public class MainActivity extends Activity {
         buildUi();
         requestNotificationPermissionIfNeeded();
         handle(getIntent());
-        handleWidgetAction(getIntent());
         stagingExecutor.execute(() -> PendingJobStore.cleanupExpired(getApplicationContext()));
     }
 
@@ -85,26 +86,6 @@ public class MainActivity extends Activity {
         super.onNewIntent(i);
         setIntent(i);
         handle(i);
-        handleWidgetAction(i);
-    }
-
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode != REQUEST_WIDGET_FILE || resultCode != RESULT_OK || data == null) return;
-        Uri selected = data.getData();
-        if (selected == null) return;
-        try {
-            getContentResolver().takePersistableUriPermission(selected,
-                    data.getFlags() & Intent.FLAG_GRANT_READ_URI_PERMISSION);
-        } catch (Exception ignored) {}
-        uris.clear();
-        uris.add(selected);
-        sharedText = "";
-        String selectedMime = getContentResolver().getType(selected);
-        mime = selectedMime == null ? "application/octet-stream" : selectedMime;
-        renderPreview();
-        status.setText("ファイルを選択しました。必要なら補足メモを入力して保存してください。");
     }
 
     @Override
@@ -114,8 +95,17 @@ public class MainActivity extends Activity {
     }
 
     private void buildUi() {
+        final int background = darkMode() ? Color.rgb(18, 18, 24) : Color.rgb(246, 247, 252);
+        final int surface = darkMode() ? Color.rgb(31, 31, 41) : Color.WHITE;
+        final int surfaceAlt = darkMode() ? Color.rgb(42, 41, 55) : Color.rgb(239, 238, 250);
+        final int primary = darkMode() ? Color.rgb(190, 172, 255) : Color.rgb(92, 67, 190);
+        final int onPrimary = darkMode() ? Color.rgb(40, 25, 90) : Color.WHITE;
+        final int text = darkMode() ? Color.rgb(242, 239, 248) : Color.rgb(31, 30, 38);
+        final int secondaryText = darkMode() ? Color.rgb(198, 194, 208) : Color.rgb(91, 88, 104);
+
         LinearLayout outer = new LinearLayout(this);
         outer.setOrientation(LinearLayout.VERTICAL);
+        outer.setBackgroundColor(background);
 
         ScrollView scroll = new ScrollView(this);
         LinearLayout root = new LinearLayout(this);
@@ -123,59 +113,66 @@ public class MainActivity extends Activity {
 
         applySystemBarInsets(outer, root);
 
-        TextView title = new TextView(this);
-        title.setText("🧠 MemoBrain Share");
-        title.setTextSize(25);
-        root.addView(title);
+        LinearLayout hero = card(surface, 22);
+        TextView title = label("🧠  MemoBrain", 28, text, Typeface.BOLD);
+        hero.addView(title);
+        TextView subtitle = label("共有した情報を、あなたの第二の脳へ。", 15, secondaryText, Typeface.NORMAL);
+        subtitle.setPadding(0, dp(7), 0, 0);
+        hero.addView(subtitle);
+        TextView secure = label("🔒  暗号化キュー  •  HTTPS  •  最大24時間保持", 12, primary, Typeface.BOLD);
+        secure.setPadding(0, dp(14), 0, 0);
+        hero.addView(secure);
+        root.addView(hero, cardParams(0, 0, 0, 14));
 
-        TextView required = new TextView(this);
-        required.setText("【Dify必須】このアプリ単体では保存できません。利用者自身のDify環境とApp API Keyが必要です。共有内容は、利用者が設定したDifyへHTTPSで送信されます。");
-        required.setPadding(0, dp(12), 0, 0);
-        root.addView(required);
-
-        TextView privacy = new TextView(this);
-        privacy.setText("端末内の送信待ちデータは暗号化します。成功時に削除し、失敗時は再送用として最大24時間だけ保持します。履歴に本文やファイル名は保存しません。");
-        privacy.setPadding(0, dp(10), 0, 0);
-        root.addView(privacy);
-
-        TextView webAds = new TextView(this);
-        webAds.setText("AIチャット画面では、開発者管理の案内・AdSenseページと、利用者が設定したDifyを別々のWebViewで表示します。利用者のDify URLは広告ページへ送信しません。");
-        webAds.setPadding(0, dp(10), 0, 0);
-        root.addView(webAds);
-
+        TextView section = label("共有内容", 13, secondaryText, Typeface.BOLD);
+        section.setPadding(dp(4), 0, 0, dp(7));
+        root.addView(section);
+        LinearLayout contentCard = card(surface, 18);
         preview = new TextView(this);
-        preview.setPadding(0, dp(24), 0, dp(12));
-        root.addView(preview);
+        preview.setTextColor(text);
+        preview.setTextSize(14);
+        preview.setPadding(0, 0, 0, dp(12));
+        contentCard.addView(preview);
 
         note = new EditText(this);
-        note.setHint("補足メモ（任意）");
-        note.setMinLines(3);
+        note.setHint("補足メモを追加（任意）");
+        note.setHintTextColor(secondaryText);
+        note.setTextColor(text);
+        note.setMinLines(2);
+        note.setPadding(dp(14), dp(12), dp(14), dp(12));
+        note.setBackground(roundRect(surfaceAlt, 14, 0, Color.TRANSPARENT));
         note.setImeOptions(EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING);
-        root.addView(note, new LinearLayout.LayoutParams(-1, -2));
+        contentCard.addView(note, new LinearLayout.LayoutParams(-1, -2));
+        root.addView(contentCard, cardParams(0, 0, 0, 12));
 
         Button detailToggle = new Button(this);
-        detailToggle.setText("詳細を指定して保存 ▼");
-        root.addView(detailToggle);
+        detailToggle.setText("⚙  詳細を指定して保存   ▾");
+        styleButton(detailToggle, surfaceAlt, primary, false);
+        root.addView(detailToggle, cardParams(0, 0, 0, 10));
 
-        detailPanel = new LinearLayout(this);
+        detailPanel = card(surface, 18);
         detailPanel.setOrientation(LinearLayout.VERTICAL);
         detailPanel.setVisibility(View.GONE);
 
         TextView destinationLabel = new TextView(this);
         destinationLabel.setText("保存先プロファイル / Knowledge");
+        destinationLabel.setTextColor(secondaryText);
         detailPanel.addView(destinationLabel);
         profileSpinner = new Spinner(this);
         detailPanel.addView(profileSpinner);
 
         categoryInput = new EditText(this);
         categoryInput.setHint("カテゴリ（空欄ならAIに任せる）");
+        modernField(categoryInput, text, secondaryText, surfaceAlt);
         detailPanel.addView(categoryInput);
         tagsInput = new EditText(this);
         tagsInput.setHint("タグ（カンマ区切り・空欄ならAIに任せる）");
+        modernField(tagsInput, text, secondaryText, surfaceAlt);
         detailPanel.addView(tagsInput);
 
         TextView priorityLabel = new TextView(this);
         priorityLabel.setText("重要度");
+        priorityLabel.setTextColor(secondaryText);
         detailPanel.addView(priorityLabel);
         prioritySpinner = new Spinner(this);
         prioritySpinner.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item,
@@ -183,50 +180,117 @@ public class MainActivity extends Activity {
         detailPanel.addView(prioritySpinner);
         readLaterCheck = new CheckBox(this);
         readLaterCheck.setText("あとで読む");
+        readLaterCheck.setTextColor(text);
         detailPanel.addView(readLaterCheck);
         todoCheck = new CheckBox(this);
         todoCheck.setText("TODOとして登録");
+        todoCheck.setTextColor(text);
         detailPanel.addView(todoCheck);
 
         Button manageProfiles = new Button(this);
         manageProfiles.setText("接続プロファイルを追加・編集");
+        styleButton(manageProfiles, surfaceAlt, primary, false);
         manageProfiles.setOnClickListener(v -> connectionSettings());
         detailPanel.addView(manageProfiles);
         root.addView(detailPanel);
         detailToggle.setOnClickListener(v -> {
             boolean show = detailPanel.getVisibility() != View.VISIBLE;
             detailPanel.setVisibility(show ? View.VISIBLE : View.GONE);
-            detailToggle.setText(show ? "詳細を閉じる ▲" : "詳細を指定して保存 ▼");
+            detailToggle.setText(show ? "⚙  詳細を閉じる   ▴" : "⚙  詳細を指定して保存   ▾");
         });
         refreshProfileSpinner();
 
         sendButton = new Button(this);
-        sendButton.setText("すぐ保存");
+        sendButton.setText("保存する  →");
+        sendButton.setTextSize(17);
+        styleButton(sendButton, primary, onPrimary, true);
         sendButton.setOnClickListener(v -> enqueueSave());
-        root.addView(sendButton);
+        root.addView(sendButton, new LinearLayout.LayoutParams(-1, dp(58)));
 
+        LinearLayout shortcuts = new LinearLayout(this);
+        shortcuts.setOrientation(LinearLayout.HORIZONTAL);
+        shortcuts.setPadding(0, dp(12), 0, 0);
         Button history = new Button(this);
-        history.setText("送信履歴・失敗した送信の再送");
+        history.setText("↻  履歴・再送");
+        styleButton(history, surface, text, false);
         history.setOnClickListener(v -> showHistory());
-        root.addView(history);
+        shortcuts.addView(history, new LinearLayout.LayoutParams(0, dp(52), 1f));
 
         Button chat = new Button(this);
-        chat.setText("Dify AIチャットを開く");
+        chat.setText("✦  AIチャット");
+        styleButton(chat, surface, text, false);
         chat.setOnClickListener(v -> openChat());
-        root.addView(chat);
+        LinearLayout.LayoutParams chatParams = new LinearLayout.LayoutParams(0, dp(52), 1f);
+        chatParams.setMargins(dp(8), 0, 0, 0);
+        shortcuts.addView(chat, chatParams);
+        root.addView(shortcuts);
 
         Button connection = new Button(this);
-        connection.setText("Dify接続設定（必須）");
+        connection.setText("接続プロファイルを管理");
+        styleButton(connection, Color.TRANSPARENT, primary, false);
         connection.setOnClickListener(v -> connectionSettings());
-        root.addView(connection);
+        root.addView(connection, cardParams(0, 8, 0, 0));
 
         status = new TextView(this);
+        status.setTextColor(secondaryText);
+        status.setTextSize(13);
         status.setPadding(0, dp(16), 0, 0);
         root.addView(status);
 
         scroll.addView(root, new ScrollView.LayoutParams(-1, -2));
         outer.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1f));
         setContentView(outer);
+    }
+
+    private boolean darkMode() {
+        return (getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES;
+    }
+
+    private LinearLayout card(int color, int padding) {
+        LinearLayout view = new LinearLayout(this);
+        view.setOrientation(LinearLayout.VERTICAL);
+        view.setPadding(dp(padding), dp(padding), dp(padding), dp(padding));
+        view.setBackground(roundRect(color, 20, 1, darkMode() ? Color.rgb(57, 56, 70) : Color.rgb(229, 228, 237)));
+        view.setElevation(dp(2));
+        return view;
+    }
+
+    private LinearLayout.LayoutParams cardParams(int left, int top, int right, int bottom) {
+        LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(-1, -2);
+        p.setMargins(dp(left), dp(top), dp(right), dp(bottom));
+        return p;
+    }
+
+    private TextView label(String value, float size, int color, int style) {
+        TextView view = new TextView(this);
+        view.setText(value); view.setTextSize(size); view.setTextColor(color);
+        view.setTypeface(Typeface.create("sans-serif", style));
+        return view;
+    }
+
+    private GradientDrawable roundRect(int color, int radius, int strokeWidth, int strokeColor) {
+        GradientDrawable drawable = new GradientDrawable();
+        drawable.setColor(color); drawable.setCornerRadius(dp(radius));
+        if (strokeWidth > 0) drawable.setStroke(dp(strokeWidth), strokeColor);
+        return drawable;
+    }
+
+    private void styleButton(Button button, int background, int foreground, boolean bold) {
+        button.setAllCaps(false);
+        button.setTextColor(foreground);
+        button.setTextSize(14);
+        button.setTypeface(Typeface.create("sans-serif", bold ? Typeface.BOLD : Typeface.NORMAL));
+        button.setBackground(roundRect(background, 16, background == Color.TRANSPARENT ? 1 : 0, foreground));
+        button.setStateListAnimator(null);
+        button.setPadding(dp(12), 0, dp(12), 0);
+    }
+
+    private void modernField(EditText field, int text, int hint, int background) {
+        field.setTextColor(text); field.setHintTextColor(hint);
+        field.setPadding(dp(14), dp(12), dp(14), dp(12));
+        field.setBackground(roundRect(background, 12, 0, Color.TRANSPARENT));
+        LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(-1, -2);
+        p.setMargins(0, dp(8), 0, 0); field.setLayoutParams(p);
     }
 
     private void applySystemBarInsets(View outer, View content) {
@@ -283,28 +347,6 @@ public class MainActivity extends Activity {
         if (visible.length() > 500) visible = visible.substring(0, 500) + "…";
         preview.setText("種類: " + (mime.isEmpty() ? "テキスト" : mime)
                 + "\nファイル: " + uris.size() + "件\n\n" + visible);
-    }
-
-    private void handleWidgetAction(Intent intent) {
-        if (intent == null) return;
-        String action = intent.getStringExtra(MemoBrainWidget.EXTRA_ACTION);
-        if (action == null || action.isEmpty()) return;
-        intent.removeExtra(MemoBrainWidget.EXTRA_ACTION);
-
-        if (MemoBrainWidget.ACTION_MEMO.equals(action)) {
-            note.requestFocus();
-            getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE);
-        } else if (MemoBrainWidget.ACTION_FILE.equals(action)) {
-            Intent picker = new Intent(Intent.ACTION_OPEN_DOCUMENT);
-            picker.addCategory(Intent.CATEGORY_OPENABLE);
-            picker.setType("*/*");
-            picker.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
-            startActivityForResult(picker, REQUEST_WIDGET_FILE);
-        } else if (MemoBrainWidget.ACTION_CHAT.equals(action)) {
-            openChat();
-        } else if (MemoBrainWidget.ACTION_HISTORY.equals(action)) {
-            showHistory();
-        }
     }
 
     private String marker() {

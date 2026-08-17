@@ -23,16 +23,6 @@
         android:name="com.google.android.gms.ads.INTEGRATION_MANAGER"
         android:value="webview" />
 
-    <receiver
-        android:name=".MemoBrainWidget"
-        android:exported="false">
-      <intent-filter>
-        <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-      </intent-filter>
-      <meta-data
-          android:name="android.appwidget.provider"
-          android:resource="@xml/memobrain_widget_info" />
-    </receiver>
 
     <activity
         android:name=".ChatActivity"
