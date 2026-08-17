@@ -14,7 +14,7 @@
       android:fullBackupContent="false"
       android:dataExtractionRules="@xml/data_extraction_rules"
       android:usesCleartextTraffic="false"
-      android:label="MemoBrain"
+      android:label="${appLabel}"
       android:icon="@drawable/ic_memobrain"
       android:theme="@style/AppTheme">
 
@@ -22,6 +22,7 @@
     <meta-data
         android:name="com.google.android.gms.ads.INTEGRATION_MANAGER"
         android:value="webview" />
+
 
     <activity
         android:name=".ChatActivity"

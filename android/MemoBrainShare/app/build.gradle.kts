@@ -44,8 +44,9 @@ android {
         applicationId = "net.automationse.memobrainshare"
         minSdk = 26
         targetSdk = 36
-        versionCode = 9
-        versionName = "1.2.0"
+        versionCode = 10
+        versionName = "1.3.0"
+        manifestPlaceholders["appLabel"] = "MemoBrain"
     }
 
     signingConfigs {
@@ -61,12 +62,17 @@ android {
 
     buildTypes {
         getByName("debug") {
+            applicationIdSuffix = ".dev"
+            versionNameSuffix = "-develop"
+            manifestPlaceholders["appLabel"] = "MemoBrain Develop"
+
             // No native AdMob unit IDs are compiled into MemoBrain.
             // Google Mobile Ads SDK is present only for WebView API for Ads.
         }
 
         getByName("release") {
             isMinifyEnabled = false
+            manifestPlaceholders["appLabel"] = "MemoBrain"
 
             if (releaseSigningReady) {
                 signingConfig = signingConfigs.getByName("release")

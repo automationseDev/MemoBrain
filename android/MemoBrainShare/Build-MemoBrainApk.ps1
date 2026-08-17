@@ -11,7 +11,7 @@ param(
 $ErrorActionPreference = "Stop"
 $GradleVersion = "9.5.1"
 $CompileSdk = 36
-$OutputApkName = "MemoBrain-v1.2.0-debug.apk"
+$OutputApkName = "MemoBrain-v1.3.0-develop-debug.apk"
 $GradleBaseUrl = "https://services.gradle.org/distributions"
 $GradleZipName = "gradle-$GradleVersion-bin.zip"
 $GradleZipUrl = "$GradleBaseUrl/$GradleZipName"

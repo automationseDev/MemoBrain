@@ -1,5 +1,17 @@
 # Changelog
 
+## v1.3.0 - 2026-08-17
+
+- Android app version 1.3.0 / versionCode 10（v1.2.0から同一署名で更新可能）
+- 共有時の補足メモ、カテゴリ、タグ、重要度、あとで読む、TODO指定を追加
+- 複数のDify接続プロファイルとKnowledge切り替えを追加
+- 接続プロファイルをAndroid Keystore + AES-GCMで暗号化
+- バックグラウンド再送を送信時の接続プロファイルへ固定
+- ライト／ダークテーマ対応のモダンなカードUIへ刷新
+- 読み込み不具合があったホーム画面ウィジェットを削除
+- Dify DSL v0.3.6でAndroid共有メタデータの手動指定を優先
+- 正式版と共存できる `net.automationse.memobrainshare.dev` のDebugビルドを維持
+
 ## v1.2.0 - 2026-08-17
 
 - Android app version 1.2.0 / versionCode 9（同一applicationId・同一署名で更新可能）

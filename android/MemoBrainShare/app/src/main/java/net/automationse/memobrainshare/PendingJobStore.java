@@ -34,7 +34,7 @@ public final class PendingJobStore {
 
     private PendingJobStore() {}
 
-    public static String create(Context context, String query, List<Uri> uris, String fallbackMime) throws Exception {
+    public static String create(Context context, String query, List<Uri> uris, String fallbackMime, String profileId) throws Exception {
         String jobId = UUID.randomUUID().toString();
         File jobDir = jobDir(context, jobId);
         if (!jobDir.mkdirs() && !jobDir.isDirectory()) throw new IllegalStateException("保存用フォルダを作成できませんでした");
@@ -73,6 +73,7 @@ public final class PendingJobStore {
             JSONObject root = new JSONObject();
             root.put("job_id", jobId);
             root.put("query", query);
+            root.put("profile_id", profileId == null ? "" : profileId);
             root.put("files", files);
             root.put("fingerprints", fingerprints);
             root.put("created_at", System.currentTimeMillis());

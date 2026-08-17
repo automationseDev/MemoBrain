@@ -44,8 +44,10 @@ public class ChatActivity extends Activity {
         super.onCreate(savedInstanceState);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);
 
-        SecurePrefs prefs = new SecurePrefs(this);
-        String difyUrl = prefs.getChatWebUrl();
+        ConnectionProfileStore profiles = new ConnectionProfileStore(this);
+        profiles.migrate(new SecurePrefs(this));
+        ConnectionProfileStore.Profile selected = profiles.selected();
+        String difyUrl = selected == null ? "" : selected.chatUrl;
         if (!isHttpsUrl(difyUrl)) {
             Toast.makeText(this, "Dify Web App URL をDify接続設定から登録してください", Toast.LENGTH_LONG).show();
             finish();

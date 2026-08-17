@@ -2,14 +2,15 @@
 
 ## 推奨DSL
 
-- `MemoBrain_DifyOnly_v0.3.5.yml`: Web調査の明示確認・Gemini Grounding・モデル自動切替版（推奨）
+- `MemoBrain_DifyOnly_v0.3.6.yml`: Android共有メタデータ・Web調査・Geminiモデル自動切替版（推奨）
+- `MemoBrain_DifyOnly_v0.3.5.yml`: Web調査の明示確認・Gemini Grounding・モデル自動切替版
 - `MemoBrain_DifyOnly_v0.3.4.yml`: Knowledge不足時に自動でGemini Groundingを実行する旧版
 - `MemoBrain_DifyOnly_v0.3.3.yml`: DuckDuckGo Searchを使う旧版
 - `MemoBrain_DifyOnly_v0.2.2.yml`: Web検索を行わない従来版
 
 AndroidアプリとDify DSLは別バージョンで管理します。
 
-## v0.3.5の動作
+## v0.3.6の動作
 
 1. 利用者の質問で既存Knowledgeを検索
 2. 十分な根拠があればKnowledgeから回答
@@ -39,6 +40,10 @@ Dify Marketplaceから `Gemini`（`langgenius/gemini`）プラグイン `0.9.5` 
 - `DIFY_API_BASE`: 自分のDify API Base（例: `https://your-dify-api.example.com/v1`）
 - `KNOWLEDGE_API_KEY`: Dify Knowledge Service API Key
 - `DATASET_NAME`: MemoBrainが利用するKnowledge名
+
+複数KnowledgeをAndroidから切り替える場合は、Knowledgeごとに本DSLからDify Appを作成し、それぞれの `DATASET_NAME` を設定してください。Androidの接続プロファイルには、そのDify AppのAPI Base / App API Key / Web App URLとKnowledge名を組にして登録します。これによりAPI Key単位で保存先を分離し、再送時も送信時のプロファイルへ固定できます。
+
+Androidから送られる `[MB:META]` JSONには手動指定したカテゴリ、タグ、重要度、あとで読む、TODO、補足メモが含まれます。空欄または `auto` の項目は従来どおりAIが分類します。
 
 公開DSLには実環境URLやAPI Keyを含めていません。
 

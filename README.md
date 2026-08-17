@@ -37,7 +37,7 @@ MemoBrain/
 ## クイックスタート
 
 1. Dify を用意します。
-2. `dify/MemoBrain_DifyOnly_v0.3.5.yml` を Dify にインポートします。Gemini公式Difyプラグイン `0.9.5` 以降が必要です。DuckDuckGo Searchプラグインは不要です。
+2. `dify/MemoBrain_DifyOnly_v0.3.6.yml` を Dify にインポートします。Gemini公式Difyプラグイン `0.9.5` 以降が必要です。DuckDuckGo Searchプラグインは不要です。
 3. Dify 側の環境変数 `DIFY_API_BASE`、`KNOWLEDGE_API_KEY`、`DATASET_NAME` を設定します。
 4. MemoBrain の APK をインストールします。
 5. MemoBrain の「Dify接続設定」に Dify App API Base URL と App API Key を設定します。
@@ -48,6 +48,12 @@ MemoBrain/
 
 ## Androidの送信管理
 
+- 共有画面は「すぐ保存」を維持し、必要な場合だけ詳細欄を展開
+- 補足メモ、カテゴリ、タグ、重要度、あとで読む、TODOを送信前に指定可能（空欄はAI自動分類）
+- 複数のDify接続プロファイルを登録し、共有ごとに保存先Knowledgeを選択
+- プロファイルのAPI URL / API Key / Web App URLはAndroid Keystore + AES-GCMで暗号化
+- 各プロファイルは対象Knowledgeを設定したDify App API Keyと組にして登録（Knowledge名は識別名として送信メタデータにも付加）
+- バックグラウンドジョブは送信時のプロファイルIDに固定され、後から選択先を変えても誤送信しない
 - 送信履歴で送信待ち・送信中・成功・失敗・期限切れを確認
 - 失敗した送信は、暗号化済みデータが残る24時間以内に手動再送
 - URL正規化とファイルSHA-256による重複登録防止
@@ -55,7 +61,7 @@ MemoBrain/
 
 ## ナレッジ補完エージェント
 
-Dify DSL v0.3.5では、質問に対して既存Knowledgeを先に検索します。検索結果がないか関連度が低い場合は一度停止して確認を表示し、利用者が `Web調査: 調べたい内容` と送信した場合だけGeminiのGoogle Search GroundingでWebを調査します。調査結果は参照URL付きの日本語記事へ整理して同じKnowledgeへ登録したうえで回答します。DuckDuckGoプラグインには依存しません。検索語句と生成対象は利用者がDifyに設定したGeminiサービスへ送信され、Geminiの利用枠を消費します。この外部検索はAIチャットから質問した場合にだけ動作し、Android共有による通常保存の経路は従来どおりです。
+Dify DSL v0.3.6では、共有時の手動メタデータを優先しつつ、質問に対して既存Knowledgeを先に検索します。検索結果がないか関連度が低い場合は一度停止して確認を表示し、利用者が `Web調査: 調べたい内容` と送信した場合だけGeminiのGoogle Search GroundingでWebを調査します。
 
 ### Geminiモデル自動切替
 
@@ -100,6 +106,18 @@ window.MEMOBRAIN_AD_CONFIG = {
 ```
 
 `config.js` は `.gitignore` 対象です。広告IDをAPKへ埋め込む必要はなく、Dify URLを `config.js` に設定してはいけません。
+
+## Develop版
+
+Debug APKは正式版と競合しない開発専用パッケージです。
+
+- applicationId: `net.automationse.memobrainshare.dev`
+- アプリ名: `MemoBrain Develop`
+- versionName: `1.3.0-develop`
+- 正式版と同時インストール可能
+- カード型のモダンな共有画面UIを利用可能
+
+ReleaseビルドのapplicationIdは従来どおり `net.automationse.memobrainshare` です。
 
 ## Android ビルド
 
