@@ -5,12 +5,20 @@ MemoBrain は、Android の共有メニューから URL、YouTube、テキスト
 > **Dify は必須です。MemoBrain 単体では保存機能を利用できません。**
 > 利用者自身の Dify 環境、MemoBrain 用 Dify DSL、Dify App API Key が必要です。
 
-## 配布方針
+## ダウンロード
 
-- **GitHub Releases**: APK と Dify DSL のメイン配布先
-- Android のネイティブ AdMob バナーは使用しない
+正式版は **[GitHub Releases](https://github.com/automationseDev/MemoBrain/releases/latest)** だけで配布します。
+
+- AndroidにはReleaseページの署名済みAPKをインストールします
+- Difyには同じReleaseページの推奨DSLをインポートします
+- GitHub以外のアプリストアでは配布していません
+- APKのSHA-256はReleaseに添付する `SHA256SUMS.txt` で確認できます
+
+## 配布・広告方針
+
+- AndroidのネイティブAdMobバナーは使用しない
 - 広告は開発者管理の案内用HTTPS WebViewに表示し、利用者のDifyは別WebViewで直接開く
-- AdSense Publisher / Slot ID は Android APK へ埋め込まず、Webサーバー側だけで設定できる
+- AdSense Publisher / Slot IDはAndroid APKへ埋め込まず、Webサーバー側だけで設定できる
 
 ## リポジトリ構成
 
@@ -47,7 +55,7 @@ MemoBrain/
 
 ## ナレッジ補完エージェント
 
-Dify DSL v0.3.5では、質問に対して既存Knowledgeを先に検索します。検索結果がないか関連度が低い場合は一度停止して確認を表示し、利用者が `Web調査: 調べたい内容` と送信した場合だけGeminiのGoogle Search GroundingでWebを調査します。調査結果は参照URL付きの日本語記事へ整理して同じKnowledgeへ登録したうえで回答します.DuckDuckGoプラグインには依存しません。検索語句と生成対象は利用者がDifyに設定したGeminiサービスへ送信され、Geminiの利用枠を消費します。この外部検索はAIチャットから質問した場合にだけ動作し、Android共有による通常保存の経路は従来どおりです。
+Dify DSL v0.3.5では、質問に対して既存Knowledgeを先に検索します。検索結果がないか関連度が低い場合は一度停止して確認を表示し、利用者が `Web調査: 調べたい内容` と送信した場合だけGeminiのGoogle Search GroundingでWebを調査します。調査結果は参照URL付きの日本語記事へ整理して同じKnowledgeへ登録したうえで回答します。DuckDuckGoプラグインには依存しません。検索語句と生成対象は利用者がDifyに設定したGeminiサービスへ送信され、Geminiの利用枠を消費します。この外部検索はAIチャットから質問した場合にだけ動作し、Android共有による通常保存の経路は従来どおりです。
 
 ### Geminiモデル自動切替
 

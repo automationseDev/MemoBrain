@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v1.2.0 - 2026-08-17
 
 - Android app version 1.2.0 / versionCode 9（同一applicationId・同一署名で更新可能）
 - 暗号化した送信履歴、最終失敗時の24時間以内の手動再送を追加

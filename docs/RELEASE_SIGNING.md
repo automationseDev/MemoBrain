@@ -2,7 +2,7 @@
 
 MemoBrain の Release APK は、同じ `applicationId`、同じ署名鍵、増加する `versionCode` を維持して更新します。
 
-ネイティブ AdMob は使用しないため、Release APK の作成に AdMob App ID / Banner Ad Unit ID は不要です。広告を利用する場合の AdSense 設定は Webサーバー側の `web/memobrain-chat/config.js` で行います。
+ネイティブ AdMob は使用しないため、Release APK の作成に AdMob App ID / Banner Ad Unit ID は不要です。広告を利用する場合の AdSense 設定は Webサーバー側の `web/memobrain-ad/config.js` で行います。
 
 ## 1. 署名情報を設定
 
@@ -56,7 +56,7 @@ cd android\MemoBrainShare
 現在のブランチでは成功すると以下を生成します。
 
 ```text
-android/MemoBrainShare/output/MemoBrain-v1.0.0-release.apk
+android/MemoBrainShare/output/MemoBrain-v1.2.0-release.apk
 android/MemoBrainShare/output/SHA256SUMS.txt
 ```
 
@@ -68,16 +68,17 @@ Android SDK の `apksigner.bat` を検出できる環境では、スクリプト
 
 Android Release APK に広告IDは注入しません。
 
-`web/memobrain-chat/config.example.js` を参考に、実際のHTTPS配備先だけで `config.js` を作成します。
+`web/memobrain-ad/config.example.js` を参考に、実際のHTTPS配備先だけで `config.js` を作成します。
 
 ```javascript
-window.MEMOBRAIN_CHAT_CONFIG = {
-  difyWebAppUrl: "https://your-dify.example.com/chat/replace-me",
+window.MEMOBRAIN_AD_CONFIG = {
   adsenseClient: "ca-pub-...",
   adsenseSlot: "...",
   showAdPlaceholder: false
 };
 ```
+
+広告ページへDify URLを設定しません。利用者のDify公開Web App URLはAndroidアプリ内で暗号化保存します。
 
 `config.js` はGit管理対象外です。AdSense値はAPKにもGitHubにも入れる必要がありません。
 
