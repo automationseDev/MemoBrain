@@ -16,9 +16,12 @@ import android.view.WindowInsets;
 import android.view.WindowManager;
 import android.view.inputmethod.EditorInfo;
 import android.widget.Button;
+import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
+import android.widget.Spinner;
+import android.widget.ArrayAdapter;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -37,6 +40,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.Locale;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -48,11 +52,17 @@ public class MainActivity extends Activity {
     private TextView preview;
     private EditText note;
     private Button sendButton;
+    private LinearLayout detailPanel;
+    private EditText categoryInput, tagsInput;
+    private Spinner prioritySpinner, profileSpinner;
+    private CheckBox readLaterCheck, todoCheck;
 
     private final ArrayList<Uri> uris = new ArrayList<>();
     private String sharedText = "";
     private String mime = "";
     private SecurePrefs prefs;
+    private ConnectionProfileStore profileStore;
+    private final ArrayList<ConnectionProfileStore.Profile> profileChoices = new ArrayList<>();
     private final ExecutorService stagingExecutor = Executors.newSingleThreadExecutor();
 
     @Override
@@ -60,6 +70,8 @@ public class MainActivity extends Activity {
         super.onCreate(b);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);
         prefs = new SecurePrefs(this);
+        profileStore = new ConnectionProfileStore(this);
+        profileStore.migrate(prefs);
         NotificationHelper.ensureChannel(this);
         buildUi();
         requestNotificationPermissionIfNeeded();
@@ -141,8 +153,55 @@ public class MainActivity extends Activity {
         note.setImeOptions(EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING);
         root.addView(note, new LinearLayout.LayoutParams(-1, -2));
 
+        Button detailToggle = new Button(this);
+        detailToggle.setText("詳細を指定して保存 ▼");
+        root.addView(detailToggle);
+
+        detailPanel = new LinearLayout(this);
+        detailPanel.setOrientation(LinearLayout.VERTICAL);
+        detailPanel.setVisibility(View.GONE);
+
+        TextView destinationLabel = new TextView(this);
+        destinationLabel.setText("保存先プロファイル / Knowledge");
+        detailPanel.addView(destinationLabel);
+        profileSpinner = new Spinner(this);
+        detailPanel.addView(profileSpinner);
+
+        categoryInput = new EditText(this);
+        categoryInput.setHint("カテゴリ（空欄ならAIに任せる）");
+        detailPanel.addView(categoryInput);
+        tagsInput = new EditText(this);
+        tagsInput.setHint("タグ（カンマ区切り・空欄ならAIに任せる）");
+        detailPanel.addView(tagsInput);
+
+        TextView priorityLabel = new TextView(this);
+        priorityLabel.setText("重要度");
+        detailPanel.addView(priorityLabel);
+        prioritySpinner = new Spinner(this);
+        prioritySpinner.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item,
+                new String[]{"AIに任せる", "低", "中", "高"}));
+        detailPanel.addView(prioritySpinner);
+        readLaterCheck = new CheckBox(this);
+        readLaterCheck.setText("あとで読む");
+        detailPanel.addView(readLaterCheck);
+        todoCheck = new CheckBox(this);
+        todoCheck.setText("TODOとして登録");
+        detailPanel.addView(todoCheck);
+
+        Button manageProfiles = new Button(this);
+        manageProfiles.setText("接続プロファイルを追加・編集");
+        manageProfiles.setOnClickListener(v -> connectionSettings());
+        detailPanel.addView(manageProfiles);
+        root.addView(detailPanel);
+        detailToggle.setOnClickListener(v -> {
+            boolean show = detailPanel.getVisibility() != View.VISIBLE;
+            detailPanel.setVisibility(show ? View.VISIBLE : View.GONE);
+            detailToggle.setText(show ? "詳細を閉じる ▲" : "詳細を指定して保存 ▼");
+        });
+        refreshProfileSpinner();
+
         sendButton = new Button(this);
-        sendButton.setText("MemoBrainに保存（バックグラウンド）");
+        sendButton.setText("すぐ保存");
         sendButton.setOnClickListener(v -> enqueueSave());
         root.addView(sendButton);
 
@@ -214,7 +273,8 @@ public class MainActivity extends Activity {
         }
 
         renderPreview();
-        status.setText(prefs.isConfigured() ? "" : "Dify接続設定が必要です。");
+        ConnectionProfileStore.Profile selected = profileStore.selected();
+        status.setText(selected != null && selected.isConfigured() ? "" : "Dify接続プロファイルの設定が必要です。");
         sendButton.setEnabled(true);
     }
 
@@ -263,7 +323,8 @@ public class MainActivity extends Activity {
     }
 
     private void openChat() {
-        String chatUrl = prefs.getChatWebUrl();
+        ConnectionProfileStore.Profile selected = profileStore.selected();
+        String chatUrl = selected == null ? "" : selected.chatUrl;
         if (chatUrl.isEmpty() || !chatUrl.toLowerCase(Locale.ROOT).startsWith("https://")) {
             Toast.makeText(this, "Dify接続設定でDify Web App URLを登録してください", Toast.LENGTH_LONG).show();
             connectionSettings();
@@ -283,13 +344,14 @@ public class MainActivity extends Activity {
             return;
         }
 
-        String key = prefs.getKey();
-        String base = prefs.getBase();
-        if (key.isEmpty() || base.isEmpty()) {
+        int profileIndex = profileSpinner == null ? -1 : profileSpinner.getSelectedItemPosition();
+        ConnectionProfileStore.Profile profile = profileIndex >= 0 && profileIndex < profileChoices.size()
+                ? profileChoices.get(profileIndex) : profileStore.selected();
+        if (profile == null || !profile.isConfigured()) {
             connectionSettings();
             return;
         }
-        if (!base.toLowerCase(Locale.ROOT).startsWith("https://")) {
+        if (!profile.base.toLowerCase(Locale.ROOT).startsWith("https://")) {
             status.setText("Dify API Base はHTTPSで設定してください。");
             connectionSettings();
             return;
@@ -297,13 +359,15 @@ public class MainActivity extends Activity {
 
         sendButton.setEnabled(false);
         status.setText(uris.isEmpty() ? "暗号化して保存キューに登録しています…" : "共有ファイルを暗号化して一時保存しています…");
-        final String q = marker() + "\n" + sharedText + "\n補足: " + noteValue;
+        profileStore.select(profile.id);
+        final String q = marker() + "\n" + metadata(profile, noteValue) + "\n" + sharedText;
+        final String profileId = profile.id;
         final ArrayList<Uri> snapshotUris = new ArrayList<>(uris);
         final String snapshotMime = mime;
 
         stagingExecutor.execute(() -> {
             try {
-                String jobId = PendingJobStore.create(this, q, snapshotUris, snapshotMime);
+                String jobId = PendingJobStore.create(this, q, snapshotUris, snapshotMime, profileId);
                 MemoWorkScheduler.enqueue(getApplicationContext(), jobId, ExistingWorkPolicy.KEEP);
 
                 runOnUiThread(() -> {
@@ -311,6 +375,11 @@ public class MainActivity extends Activity {
                     Toast.makeText(this, "MemoBrainでバックグラウンド保存を開始しました", Toast.LENGTH_SHORT).show();
                     sendButton.setEnabled(true);
                     note.setText("");
+                    categoryInput.setText("");
+                    tagsInput.setText("");
+                    prioritySpinner.setSelection(0);
+                    readLaterCheck.setChecked(false);
+                    todoCheck.setChecked(false);
                     if (isShareInvocation()) new Handler(Looper.getMainLooper()).postDelayed(this::finish, 700);
                 });
             } catch (Exception e) {
@@ -402,94 +471,97 @@ public class MainActivity extends Activity {
         return value;
     }
 
+    private String metadata(ConnectionProfileStore.Profile profile, String noteValue) {
+        String[] priorityValues = {"auto", "low", "medium", "high"};
+        int priority = prioritySpinner == null ? 0 : prioritySpinner.getSelectedItemPosition();
+        if (priority < 0 || priority >= priorityValues.length) priority = 0;
+        try {
+            JSONObject meta = new JSONObject();
+            meta.put("knowledge", profile.knowledgeName);
+            meta.put("category", categoryInput.getText().toString().trim());
+            meta.put("tags", tagsInput.getText().toString().trim());
+            meta.put("note", noteValue);
+            meta.put("priority", priorityValues[priority]);
+            meta.put("read_later", readLaterCheck.isChecked());
+            meta.put("todo", todoCheck.isChecked());
+            return "[MB:META]\n" + meta + "\n[/MB:META]";
+        } catch (Exception ignored) { return "[MB:META]\n{}\n[/MB:META]"; }
+    }
+
+    private void refreshProfileSpinner() {
+        if (profileSpinner == null) return;
+        profileChoices.clear();
+        profileChoices.addAll(profileStore.list());
+        ArrayList<String> labels = new ArrayList<>();
+        ConnectionProfileStore.Profile selected = profileStore.selected();
+        int selection = 0;
+        for (int i = 0; i < profileChoices.size(); i++) {
+            ConnectionProfileStore.Profile p = profileChoices.get(i);
+            labels.add((p.name.isEmpty() ? "名称未設定" : p.name) + (p.knowledgeName.isEmpty() ? "（Dify既定Knowledge）" : " / " + p.knowledgeName));
+            if (selected != null && selected.id.equals(p.id)) selection = i;
+        }
+        if (labels.isEmpty()) labels.add("プロファイル未設定");
+        profileSpinner.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, labels));
+        if (!profileChoices.isEmpty()) profileSpinner.setSelection(selection);
+    }
+
     private void connectionSettings() {
-        final TextView explain = new TextView(this);
-        explain.setText("本アプリの利用にはDifyが必須です。共有内容はここで指定したDifyへ送信されます。API Base、API Key、Dify Web App URLは端末内で暗号化して保存し、広告ページへは送信しません。");
-        explain.setPadding(0, 0, 0, dp(16));
+        List<ConnectionProfileStore.Profile> items = profileStore.list();
+        ArrayList<String> names = new ArrayList<>();
+        ConnectionProfileStore.Profile selected = profileStore.selected();
+        int checked = -1;
+        for (int i = 0; i < items.size(); i++) {
+            names.add(items.get(i).name.isEmpty() ? "名称未設定" : items.get(i).name);
+            if (selected != null && selected.id.equals(items.get(i).id)) checked = i;
+        }
+        final int[] choice = {checked};
+        new AlertDialog.Builder(this)
+                .setTitle("接続プロファイル")
+                .setSingleChoiceItems(names.toArray(new String[0]), checked, (d, which) -> choice[0] = which)
+                .setPositiveButton("選択", (d, w) -> {
+                    if (choice[0] >= 0 && choice[0] < items.size()) profileStore.select(items.get(choice[0]).id);
+                    refreshProfileSpinner();
+                })
+                .setNeutralButton("追加", (d, w) -> editProfile(null))
+                .setNegativeButton(items.isEmpty() ? "閉じる" : "編集", (d, w) -> {
+                    if (choice[0] >= 0 && choice[0] < items.size()) editProfile(items.get(choice[0]));
+                }).show();
+    }
 
-        final EditText base = new EditText(this);
-        base.setHint("Dify API Base 例: https://example.com/v1");
-        base.setText(prefs.getBase());
-        base.setSingleLine(true);
-        base.setImeOptions(EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING);
-
-        final EditText key = new EditText(this);
-        key.setHint("Dify App API Key (app-...)");
-        key.setText(prefs.getKey());
-        key.setSingleLine(true);
-        key.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
-        key.setImeOptions(EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING);
-        if (Build.VERSION.SDK_INT >= 26) key.setImportantForAutofill(View.IMPORTANT_FOR_AUTOFILL_NO_EXCLUDE_DESCENDANTS);
-
-        final EditText chatWebUrl = new EditText(this);
-        chatWebUrl.setHint("Dify Web App URL（任意・HTTPS）");
-        chatWebUrl.setText(prefs.getChatWebUrl());
-        chatWebUrl.setSingleLine(true);
-        chatWebUrl.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_URI);
-        chatWebUrl.setImeOptions(EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING);
-
-        LinearLayout l = new LinearLayout(this);
-        l.setOrientation(LinearLayout.VERTICAL);
-        l.setPadding(dp(32), 0, dp(32), 0);
-        l.addView(explain);
-        l.addView(base);
-        l.addView(key);
-        l.addView(chatWebUrl);
-
-        AlertDialog dialog = new AlertDialog.Builder(this)
-                .setTitle("Dify接続設定")
-                .setView(l)
-                .setPositiveButton("保存", null)
-                .setNeutralButton("接続情報を削除", null)
-                .setNegativeButton("キャンセル", null)
-                .create();
-
-        dialog.setOnShowListener(ignored -> {
+    private void editProfile(ConnectionProfileStore.Profile existing) {
+        EditText name = field("プロファイル名（例: 仕事）", existing == null ? "" : existing.name, false);
+        EditText knowledge = field("Knowledge名（例: 技術情報）", existing == null ? "" : existing.knowledgeName, false);
+        EditText base = field("Dify API Base（HTTPS）", existing == null ? "" : existing.base, false);
+        EditText key = field("Dify App API Key", existing == null ? "" : existing.key, true);
+        EditText chat = field("Dify Web App URL（任意・HTTPS）", existing == null ? "" : existing.chatUrl, false);
+        LinearLayout form = new LinearLayout(this); form.setOrientation(LinearLayout.VERTICAL); form.setPadding(dp(24), 0, dp(24), 0);
+        form.addView(name); form.addView(knowledge); form.addView(base); form.addView(key); form.addView(chat);
+        AlertDialog dialog = new AlertDialog.Builder(this).setTitle(existing == null ? "プロファイル追加" : "プロファイル編集")
+                .setView(form).setPositiveButton("保存", null).setNeutralButton(existing == null ? "" : "削除", null).setNegativeButton("キャンセル", null).create();
+        dialog.setOnShowListener(x -> {
             dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
-                String baseValue = base.getText().toString().trim();
-                String keyValue = key.getText().toString().trim();
-                String chatWebValue = chatWebUrl.getText().toString().trim();
-                if (!baseValue.toLowerCase(Locale.ROOT).startsWith("https://")) {
-                    base.setError("HTTPSのDify API Baseを入力してください");
-                    return;
-                }
-                if (keyValue.isEmpty()) {
-                    key.setError("Dify App API Keyを入力してください");
-                    return;
-                }
-                if (!chatWebValue.isEmpty() && !chatWebValue.toLowerCase(Locale.ROOT).startsWith("https://")) {
-                    chatWebUrl.setError("HTTPSのDify Web App URLを入力してください");
-                    return;
-                }
-                try {
-                    prefs.putBase(baseValue);
-                    prefs.putKey(keyValue);
-                    prefs.putChatWebUrl(chatWebValue);
-                    status.setText("");
-                    Toast.makeText(this, "Dify接続設定を暗号化して保存しました", Toast.LENGTH_SHORT).show();
-                    dialog.dismiss();
-                } catch (Exception e) {
-                    Toast.makeText(this, "接続設定を安全に保存できませんでした", Toast.LENGTH_LONG).show();
-                }
+                String b = base.getText().toString().trim(), k = key.getText().toString().trim(), c = chat.getText().toString().trim();
+                if (name.getText().toString().trim().isEmpty()) { name.setError("名前を入力してください"); return; }
+                if (!b.toLowerCase(Locale.ROOT).startsWith("https://")) { base.setError("HTTPS URLを入力してください"); return; }
+                if (k.isEmpty()) { key.setError("API Keyを入力してください"); return; }
+                if (!c.isEmpty() && !c.toLowerCase(Locale.ROOT).startsWith("https://")) { chat.setError("HTTPS URLを入力してください"); return; }
+                ConnectionProfileStore.Profile p = new ConnectionProfileStore.Profile(existing == null ? null : existing.id,
+                        name.getText().toString(), knowledge.getText().toString(), b, k, c);
+                profileStore.save(p, true); refreshProfileSpinner(); status.setText(""); dialog.dismiss();
             });
-
-            dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener(v ->
-                    new AlertDialog.Builder(this)
-                            .setTitle("接続情報を削除")
-                            .setMessage("端末に保存されているDify API Base、API Key、Dify Web App URLを削除します。")
-                            .setPositiveButton("削除", (d, w) -> {
-                                prefs.clearConnection();
-                                base.setText("");
-                                key.setText("");
-                                chatWebUrl.setText("");
-                                status.setText("Dify接続設定が必要です。");
-                                Toast.makeText(this, "接続情報を削除しました", Toast.LENGTH_SHORT).show();
-                                dialog.dismiss();
-                            })
-                            .setNegativeButton("キャンセル", null)
-                            .show());
+            if (existing == null) dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setVisibility(View.GONE);
+            else dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener(v -> {
+                profileStore.delete(existing.id); refreshProfileSpinner(); dialog.dismiss();
+            });
         });
         dialog.show();
+    }
+
+    private EditText field(String hint, String value, boolean password) {
+        EditText field = new EditText(this); field.setHint(hint); field.setText(value); field.setSingleLine(true);
+        field.setImeOptions(EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING);
+        if (password) field.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
+        return field;
     }
 
     private void requestNotificationPermissionIfNeeded() {

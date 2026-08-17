@@ -38,11 +38,6 @@ public class MemoSaveWorker extends Worker {
         boolean deletePending = false;
         HistoryStore.updateStatus(getApplicationContext(), jobId, HistoryStore.SENDING);
         try {
-            SecurePrefs prefs = new SecurePrefs(getApplicationContext());
-            String key = prefs.getKey();
-            String base = prefs.getBase();
-            if (key.isEmpty() || base.isEmpty()) throw new IllegalStateException("Dify接続設定がありません");
-
             JSONObject job = PendingJobStore.read(getApplicationContext(), jobId);
             if (PendingJobStore.isExpired(job)) {
                 deletePending = true;
@@ -50,6 +45,14 @@ public class MemoSaveWorker extends Worker {
                 NotificationHelper.failure(getApplicationContext(), "送信待ちデータの保存期限が切れました");
                 return Result.failure();
             }
+
+            ConnectionProfileStore profiles = new ConnectionProfileStore(getApplicationContext());
+            profiles.migrate(new SecurePrefs(getApplicationContext()));
+            String profileId = job.optString("profile_id", "");
+            ConnectionProfileStore.Profile profile = profileId.isEmpty() ? profiles.selected() : profiles.find(profileId);
+            if (profile == null || !profile.isConfigured()) throw new IllegalStateException("送信時のDify接続プロファイルがありません");
+            String key = profile.key;
+            String base = profile.base;
 
             String query = job.optString("query", "");
             JSONArray files = job.optJSONArray("files");
