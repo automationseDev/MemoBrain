@@ -1,5 +1,24 @@
 # Changelog
 
+## v1.2.0 - 2026-08-17
+
+- Android app version 1.2.0 / versionCode 9（同一applicationId・同一署名で更新可能）
+- 暗号化した送信履歴、最終失敗時の24時間以内の手動再送を追加
+- 正規化URLとファイルSHA-256による重複登録防止を追加
+- Dify DSL v0.3.5でKnowledge不足時のWeb調査を明示確認式へ変更
+
+- Dify DSL v0.3.4でDuckDuckGoを廃止し、Knowledge不足時のWeb検索・記事生成をGemini Google Search Groundingへ統合
+- Dify DSL v0.3.3でGemini成功時の接続ハンドルを`success-branch`から`source`へ修正
+- Dify DSL v0.3.2でGemini 3.6 Flash → 3.5 Flash → 2.5 Flashの自動フェイルオーバーを全LLM処理へ追加
+- Dify DSL v0.3.1でDuckDuckGo Queryの空入力とKnowledge該当なし時のWeb検索未実行を修正
+- Android app version 1.1.0 / versionCode 8（同一applicationId・同一署名でv1.0.0から更新可能）
+- Dify DSL v0.3.0にKnowledge優先・DuckDuckGo Web検索フォールバック・記事化・Knowledge自動登録を追加
+- 完全な空入力でKnowledgeへ投稿されない入力チェックを追加
+- AIチャット画面を広告用WebViewと利用者Dify用WebViewへ分離
+- 利用者のDify Web App URLを広告ページへ送信しない構成へ変更
+- `web/memobrain-chat/` を広告・案内専用の `web/memobrain-ad/` へ置換
+- AdSense設定はGit管理外の `web/memobrain-ad/config.js` に限定
+
 ## v1.0.0
 - 初回正式リリース版へ移行
 - Android app version 1.0.0 / versionCode 7

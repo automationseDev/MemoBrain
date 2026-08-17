@@ -124,19 +124,15 @@ else {
 
 $ProjectRoot = (Resolve-Path -LiteralPath $ProjectRoot).Path
 $gradlew = Join-Path $ProjectRoot "gradlew.bat"
-$releaseSecrets = Join-Path $ProjectRoot "release-secrets.properties"
 $signingSecrets = Join-Path $ProjectRoot "signing-secrets.properties"
 $localProperties = Join-Path $ProjectRoot "local.properties"
 
 Write-Host "MemoBrain Signed Release APK Builder v1.0.0" -ForegroundColor Green
 Write-Host ("Project: " + $ProjectRoot)
+Write-Host "Ads: WebView AdSense only (no native AdMob IDs required)"
 
 if (-not (Test-Path -LiteralPath $gradlew)) {
     Fail "gradlew.bat was not found. Run git pull and try again."
-}
-
-if (-not (Test-Path -LiteralPath $releaseSecrets)) {
-    Fail "release-secrets.properties was not found. Copy release-secrets.properties.example and set the production AdMob IDs."
 }
 
 if (-not (Test-Path -LiteralPath $signingSecrets)) {
@@ -175,7 +171,7 @@ try {
     $outputDir = Join-Path $ProjectRoot "output"
     New-Item -ItemType Directory -Path $outputDir -Force | Out-Null
 
-    $outputApk = Join-Path $outputDir "MemoBrain-v1.0.0-release.apk"
+    $outputApk = Join-Path $outputDir "MemoBrain-v1.2.0-release.apk"
     Copy-Item -LiteralPath $sourceApk -Destination $outputApk -Force
 
     $hash = (Get-FileHash -LiteralPath $outputApk -Algorithm SHA256).Hash.ToLowerInvariant()

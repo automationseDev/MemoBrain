@@ -12,11 +12,11 @@ import android.os.Handler;
 import android.os.Looper;
 import android.text.InputType;
 import android.view.View;
+import android.view.WindowInsets;
 import android.view.WindowManager;
 import android.view.inputmethod.EditorInfo;
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
@@ -30,38 +30,28 @@ import androidx.work.NetworkType;
 import androidx.work.OneTimeWorkRequest;
 import androidx.work.WorkManager;
 
-import com.google.android.gms.ads.AdRequest;
-import com.google.android.gms.ads.AdSize;
-import com.google.android.gms.ads.AdView;
-import com.google.android.gms.ads.MobileAds;
-import com.google.android.ump.ConsentInformation;
-import com.google.android.ump.ConsentRequestParameters;
-import com.google.android.ump.UserMessagingPlatform;
+import org.json.JSONArray;
+import org.json.JSONObject;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 public class MainActivity extends Activity {
     private TextView status;
     private TextView preview;
     private EditText note;
     private Button sendButton;
-    private Button privacyOptionsButton;
-    private FrameLayout adContainer;
-    private AdView adView;
 
     private final ArrayList<Uri> uris = new ArrayList<>();
     private String sharedText = "";
     private String mime = "";
     private SecurePrefs prefs;
     private final ExecutorService stagingExecutor = Executors.newSingleThreadExecutor();
-
-    private ConsentInformation consentInformation;
-    private final AtomicBoolean mobileAdsInitialized = new AtomicBoolean(false);
 
     @Override
     public void onCreate(Bundle b) {
@@ -73,7 +63,6 @@ public class MainActivity extends Activity {
         requestNotificationPermissionIfNeeded();
         handle(getIntent());
         stagingExecutor.execute(() -> PendingJobStore.cleanupExpired(getApplicationContext()));
-        initConsentAndAds();
     }
 
     @Override
@@ -85,10 +74,6 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onDestroy() {
-        if (adView != null) {
-            adView.destroy();
-            adView = null;
-        }
         stagingExecutor.shutdown();
         super.onDestroy();
     }
@@ -96,10 +81,12 @@ public class MainActivity extends Activity {
     private void buildUi() {
         LinearLayout outer = new LinearLayout(this);
         outer.setOrientation(LinearLayout.VERTICAL);
+
         ScrollView scroll = new ScrollView(this);
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(32, 64, 32, 32);
+
+        applySystemBarInsets(outer, root);
 
         TextView title = new TextView(this);
         title.setText("🧠 MemoBrain Share");
@@ -108,16 +95,21 @@ public class MainActivity extends Activity {
 
         TextView required = new TextView(this);
         required.setText("【Dify必須】このアプリ単体では保存できません。利用者自身のDify環境とApp API Keyが必要です。共有内容は、利用者が設定したDifyへHTTPSで送信されます。");
-        required.setPadding(0, 12, 0, 0);
+        required.setPadding(0, dp(12), 0, 0);
         root.addView(required);
 
         TextView privacy = new TextView(this);
-        privacy.setText("端末内の送信待ちデータはアプリ専用領域で暗号化し、送信完了・最終失敗時に削除します。未送信でも最大24時間で削除します。バックアップも無効です。");
-        privacy.setPadding(0, 10, 0, 0);
+        privacy.setText("端末内の送信待ちデータは暗号化します。成功時に削除し、失敗時は再送用として最大24時間だけ保持します。履歴に本文やファイル名は保存しません。");
+        privacy.setPadding(0, dp(10), 0, 0);
         root.addView(privacy);
 
+        TextView webAds = new TextView(this);
+        webAds.setText("AIチャット画面では、開発者管理の案内・AdSenseページと、利用者が設定したDifyを別々のWebViewで表示します。利用者のDify URLは広告ページへ送信しません。");
+        webAds.setPadding(0, dp(10), 0, 0);
+        root.addView(webAds);
+
         preview = new TextView(this);
-        preview.setPadding(0, 24, 0, 12);
+        preview.setPadding(0, dp(24), 0, dp(12));
         root.addView(preview);
 
         note = new EditText(this);
@@ -131,29 +123,56 @@ public class MainActivity extends Activity {
         sendButton.setOnClickListener(v -> enqueueSave());
         root.addView(sendButton);
 
+        Button history = new Button(this);
+        history.setText("送信履歴・失敗した送信の再送");
+        history.setOnClickListener(v -> showHistory());
+        root.addView(history);
+
+        Button chat = new Button(this);
+        chat.setText("Dify AIチャットを開く");
+        chat.setOnClickListener(v -> openChat());
+        root.addView(chat);
+
         Button connection = new Button(this);
         connection.setText("Dify接続設定（必須）");
         connection.setOnClickListener(v -> connectionSettings());
         root.addView(connection);
 
-        privacyOptionsButton = new Button(this);
-        privacyOptionsButton.setText("広告のプライバシー設定");
-        privacyOptionsButton.setVisibility(View.GONE);
-        privacyOptionsButton.setOnClickListener(v -> showPrivacyOptions());
-        root.addView(privacyOptionsButton);
-
         status = new TextView(this);
-        status.setPadding(0, 16, 0, 0);
+        status.setPadding(0, dp(16), 0, 0);
         root.addView(status);
 
         scroll.addView(root, new ScrollView.LayoutParams(-1, -2));
         outer.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1f));
-
-        adContainer = new FrameLayout(this);
-        adContainer.setVisibility(View.GONE);
-        outer.addView(adContainer, new LinearLayout.LayoutParams(-1, -2));
-
         setContentView(outer);
+    }
+
+    private void applySystemBarInsets(View outer, View content) {
+        final int horizontal = dp(20);
+        final int topBase = dp(24);
+        final int bottomBase = dp(24);
+        content.setPadding(horizontal, topBase, horizontal, bottomBase);
+
+        outer.setOnApplyWindowInsetsListener((v, insets) -> {
+            int top;
+            int bottom;
+            if (Build.VERSION.SDK_INT >= 30) {
+                android.graphics.Insets bars = insets.getInsets(WindowInsets.Type.systemBars());
+                top = bars.top;
+                bottom = bars.bottom;
+            } else {
+                top = insets.getSystemWindowInsetTop();
+                bottom = insets.getSystemWindowInsetBottom();
+            }
+            content.setPadding(horizontal, topBase + top, horizontal, bottomBase);
+            v.setPadding(0, 0, 0, bottom);
+            return insets;
+        });
+        outer.requestApplyInsets();
+    }
+
+    private int dp(int value) {
+        return Math.round(value * getResources().getDisplayMetrics().density);
     }
 
     @SuppressWarnings("deprecation")
@@ -195,7 +214,27 @@ public class MainActivity extends Activity {
         return Intent.ACTION_SEND.equals(action) || Intent.ACTION_SEND_MULTIPLE.equals(action);
     }
 
+    private void openChat() {
+        String chatUrl = prefs.getChatWebUrl();
+        if (chatUrl.isEmpty() || !chatUrl.toLowerCase(Locale.ROOT).startsWith("https://")) {
+            Toast.makeText(this, "Dify接続設定でDify Web App URLを登録してください", Toast.LENGTH_LONG).show();
+            connectionSettings();
+            return;
+        }
+        startActivity(new Intent(this, ChatActivity.class));
+    }
+
     private void enqueueSave() {
+        String noteValue = note.getText() == null ? "" : note.getText().toString().trim();
+        boolean hasSharedText = sharedText != null && !sharedText.trim().isEmpty();
+        boolean hasAttachments = !uris.isEmpty();
+        if (!hasSharedText && !hasAttachments && noteValue.isEmpty()) {
+            status.setText("保存する内容がありません。テキストまたは補足メモを入力するか、ファイルを共有してください。");
+            Toast.makeText(this, "保存する内容を入力してください", Toast.LENGTH_LONG).show();
+            note.requestFocus();
+            return;
+        }
+
         String key = prefs.getKey();
         String base = prefs.getBase();
         if (key.isEmpty() || base.isEmpty()) {
@@ -210,31 +249,14 @@ public class MainActivity extends Activity {
 
         sendButton.setEnabled(false);
         status.setText(uris.isEmpty() ? "暗号化して保存キューに登録しています…" : "共有ファイルを暗号化して一時保存しています…");
-        final String q = marker() + "\n" + sharedText + "\n補足: " + note.getText().toString();
+        final String q = marker() + "\n" + sharedText + "\n補足: " + noteValue;
         final ArrayList<Uri> snapshotUris = new ArrayList<>(uris);
         final String snapshotMime = mime;
 
         stagingExecutor.execute(() -> {
             try {
                 String jobId = PendingJobStore.create(this, q, snapshotUris, snapshotMime);
-                Constraints constraints = new Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build();
-                Data input = new Data.Builder().putString(MemoSaveWorker.KEY_JOB_ID, jobId).build();
-                OneTimeWorkRequest request = new OneTimeWorkRequest.Builder(MemoSaveWorker.class)
-                        .setInputData(input)
-                        .setConstraints(constraints)
-                        .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
-                        .addTag("memobrain-save")
-                        .build();
-
-                WorkManager wm = WorkManager.getInstance(getApplicationContext());
-                wm.enqueueUniqueWork("memobrain-save-" + jobId, ExistingWorkPolicy.KEEP, request);
-
-                OneTimeWorkRequest cleanup = new OneTimeWorkRequest.Builder(MemoCleanupWorker.class)
-                        .setInputData(input)
-                        .setInitialDelay(PendingJobStore.MAX_RETENTION_MILLIS, TimeUnit.MILLISECONDS)
-                        .addTag("memobrain-cleanup")
-                        .build();
-                wm.enqueueUniqueWork("memobrain-cleanup-" + jobId, ExistingWorkPolicy.REPLACE, cleanup);
+                MemoWorkScheduler.enqueue(getApplicationContext(), jobId, ExistingWorkPolicy.KEEP);
 
                 runOnUiThread(() -> {
                     status.setText("保存キューに登録しました。別アプリへ移動してOKです。");
@@ -246,16 +268,96 @@ public class MainActivity extends Activity {
             } catch (Exception e) {
                 runOnUiThread(() -> {
                     sendButton.setEnabled(true);
-                    status.setText("保存準備に失敗しました。共有元またはDify接続設定を確認してください。");
+                    if (e instanceof PendingJobStore.DuplicateException) {
+                        status.setText("同じURLまたはファイルが送信履歴にあるため、重複登録を止めました。");
+                        Toast.makeText(this, "重複するURLまたはファイルです", Toast.LENGTH_LONG).show();
+                    } else {
+                        status.setText("保存準備に失敗しました。共有元またはDify接続設定を確認してください。");
+                    }
                 });
             }
         });
     }
 
+    private void showHistory() {
+        JSONArray items = HistoryStore.list(this);
+        LinearLayout list = new LinearLayout(this);
+        list.setOrientation(LinearLayout.VERTICAL);
+        list.setPadding(dp(20), dp(8), dp(20), dp(8));
+
+        if (items.length() == 0) {
+            TextView empty = new TextView(this);
+            empty.setText("送信履歴はありません。");
+            list.addView(empty);
+        } else {
+            SimpleDateFormat format = new SimpleDateFormat("MM/dd HH:mm", Locale.JAPAN);
+            for (int i = 0; i < items.length(); i++) {
+                JSONObject item = items.optJSONObject(i);
+                if (item == null) continue;
+                String jobId = item.optString("job_id");
+                String itemStatus = item.optString("status");
+                String kind = item.optString("kind", "TEXT");
+                long createdAt = item.optLong("created_at");
+
+                TextView row = new TextView(this);
+                row.setText(format.format(new Date(createdAt)) + "  " + kind + "  " + historyStatus(itemStatus));
+                row.setPadding(0, dp(10), 0, dp(4));
+                list.addView(row);
+
+                if (HistoryStore.FAILED.equals(itemStatus)) {
+                    Button retry = new Button(this);
+                    retry.setText("この送信を再試行");
+                    retry.setEnabled(PendingJobStore.exists(this, jobId));
+                    list.addView(retry);
+                    retry.setOnClickListener(v -> {
+                        if (!PendingJobStore.exists(this, jobId)) {
+                            HistoryStore.updateStatus(this, jobId, HistoryStore.EXPIRED);
+                            Toast.makeText(this, "再送期限が切れています", Toast.LENGTH_LONG).show();
+                            return;
+                        }
+                        HistoryStore.updateStatus(this, jobId, HistoryStore.QUEUED);
+                        MemoWorkScheduler.enqueue(this, jobId, ExistingWorkPolicy.REPLACE);
+                        Toast.makeText(this, "再送キューへ登録しました", Toast.LENGTH_SHORT).show();
+                    });
+                }
+            }
+        }
+
+        ScrollView scroll = new ScrollView(this);
+        scroll.addView(list);
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setTitle("送信履歴")
+                .setView(scroll)
+                .setPositiveButton("閉じる", null)
+                .setNeutralButton("履歴を消去", null)
+                .create();
+        dialog.setOnShowListener(ignored -> dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener(v ->
+                new AlertDialog.Builder(this)
+                        .setTitle("送信履歴を消去")
+                        .setMessage("重複判定に使う履歴も消去します。送信待ちデータは消去されず、24時間で自動削除されます。")
+                        .setPositiveButton("消去", (d, w) -> {
+                            HistoryStore.clear(this);
+                            dialog.dismiss();
+                            Toast.makeText(this, "送信履歴を消去しました", Toast.LENGTH_SHORT).show();
+                        })
+                        .setNegativeButton("キャンセル", null)
+                        .show()));
+        dialog.show();
+    }
+
+    private String historyStatus(String value) {
+        if (HistoryStore.QUEUED.equals(value)) return "送信待ち";
+        if (HistoryStore.SENDING.equals(value)) return "送信中";
+        if (HistoryStore.SUCCESS.equals(value)) return "成功";
+        if (HistoryStore.FAILED.equals(value)) return "失敗（再送可）";
+        if (HistoryStore.EXPIRED.equals(value)) return "期限切れ";
+        return value;
+    }
+
     private void connectionSettings() {
         final TextView explain = new TextView(this);
-        explain.setText("本アプリの利用にはDifyが必須です。共有内容はここで指定したDifyへ送信されます。API BaseとAPI Keyは端末内で暗号化して保存し、APKには含めません。");
-        explain.setPadding(0, 0, 0, 16);
+        explain.setText("本アプリの利用にはDifyが必須です。共有内容はここで指定したDifyへ送信されます。API Base、API Key、Dify Web App URLは端末内で暗号化して保存し、広告ページへは送信しません。");
+        explain.setPadding(0, 0, 0, dp(16));
 
         final EditText base = new EditText(this);
         base.setHint("Dify API Base 例: https://example.com/v1");
@@ -271,12 +373,20 @@ public class MainActivity extends Activity {
         key.setImeOptions(EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING);
         if (Build.VERSION.SDK_INT >= 26) key.setImportantForAutofill(View.IMPORTANT_FOR_AUTOFILL_NO_EXCLUDE_DESCENDANTS);
 
+        final EditText chatWebUrl = new EditText(this);
+        chatWebUrl.setHint("Dify Web App URL（任意・HTTPS）");
+        chatWebUrl.setText(prefs.getChatWebUrl());
+        chatWebUrl.setSingleLine(true);
+        chatWebUrl.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_URI);
+        chatWebUrl.setImeOptions(EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING);
+
         LinearLayout l = new LinearLayout(this);
         l.setOrientation(LinearLayout.VERTICAL);
-        l.setPadding(32, 0, 32, 0);
+        l.setPadding(dp(32), 0, dp(32), 0);
         l.addView(explain);
         l.addView(base);
         l.addView(key);
+        l.addView(chatWebUrl);
 
         AlertDialog dialog = new AlertDialog.Builder(this)
                 .setTitle("Dify接続設定")
@@ -290,6 +400,7 @@ public class MainActivity extends Activity {
             dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
                 String baseValue = base.getText().toString().trim();
                 String keyValue = key.getText().toString().trim();
+                String chatWebValue = chatWebUrl.getText().toString().trim();
                 if (!baseValue.toLowerCase(Locale.ROOT).startsWith("https://")) {
                     base.setError("HTTPSのDify API Baseを入力してください");
                     return;
@@ -298,9 +409,14 @@ public class MainActivity extends Activity {
                     key.setError("Dify App API Keyを入力してください");
                     return;
                 }
+                if (!chatWebValue.isEmpty() && !chatWebValue.toLowerCase(Locale.ROOT).startsWith("https://")) {
+                    chatWebUrl.setError("HTTPSのDify Web App URLを入力してください");
+                    return;
+                }
                 try {
                     prefs.putBase(baseValue);
                     prefs.putKey(keyValue);
+                    prefs.putChatWebUrl(chatWebValue);
                     status.setText("");
                     Toast.makeText(this, "Dify接続設定を暗号化して保存しました", Toast.LENGTH_SHORT).show();
                     dialog.dismiss();
@@ -312,11 +428,12 @@ public class MainActivity extends Activity {
             dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener(v ->
                     new AlertDialog.Builder(this)
                             .setTitle("接続情報を削除")
-                            .setMessage("端末に保存されているDify API BaseとAPI Keyを削除します。")
+                            .setMessage("端末に保存されているDify API Base、API Key、Dify Web App URLを削除します。")
                             .setPositiveButton("削除", (d, w) -> {
                                 prefs.clearConnection();
                                 base.setText("");
                                 key.setText("");
+                                chatWebUrl.setText("");
                                 status.setText("Dify接続設定が必要です。");
                                 Toast.makeText(this, "接続情報を削除しました", Toast.LENGTH_SHORT).show();
                                 dialog.dismiss();
@@ -325,83 +442,6 @@ public class MainActivity extends Activity {
                             .show());
         });
         dialog.show();
-    }
-
-    private void initConsentAndAds() {
-        consentInformation = UserMessagingPlatform.getConsentInformation(this);
-        ConsentRequestParameters params = new ConsentRequestParameters.Builder().build();
-        consentInformation.requestConsentInfoUpdate(
-                this,
-                params,
-                () -> {
-                    updatePrivacyOptionsButton();
-                    UserMessagingPlatform.loadAndShowConsentFormIfRequired(this, formError -> {
-                        updatePrivacyOptionsButton();
-                        if (consentInformation.canRequestAds()) initializeMobileAdsSdk();
-                    });
-                },
-                requestConsentError -> {
-                    updatePrivacyOptionsButton();
-                    if (consentInformation.canRequestAds()) initializeMobileAdsSdk();
-                });
-        if (consentInformation.canRequestAds()) initializeMobileAdsSdk();
-    }
-
-    private void initializeMobileAdsSdk() {
-        if (!mobileAdsInitialized.compareAndSet(false, true)) {
-            runOnUiThread(this::loadBanner);
-            return;
-        }
-        new Thread(() -> MobileAds.initialize(getApplicationContext(), initializationStatus -> runOnUiThread(this::loadBanner))).start();
-    }
-
-    private void loadBanner() {
-        if (consentInformation != null && !consentInformation.canRequestAds()) {
-            hideBanner();
-            return;
-        }
-        String unitId = BuildConfig.ADMOB_BANNER_ID;
-        if (unitId == null || unitId.trim().isEmpty()) {
-            hideBanner();
-            return;
-        }
-        if (adView != null) {
-            adView.destroy();
-            adContainer.removeAllViews();
-        }
-        adView = new AdView(this);
-        adView.setAdUnitId(unitId.trim());
-        adView.setAdSize(AdSize.BANNER);
-        adContainer.removeAllViews();
-        adContainer.addView(adView, new FrameLayout.LayoutParams(-2, -2));
-        adContainer.setVisibility(View.VISIBLE);
-        adView.loadAd(new AdRequest.Builder().build());
-    }
-
-    private void hideBanner() {
-        if (adView != null) {
-            adView.destroy();
-            adView = null;
-        }
-        adContainer.removeAllViews();
-        adContainer.setVisibility(View.GONE);
-    }
-
-    private void updatePrivacyOptionsButton() {
-        runOnUiThread(() -> {
-            boolean required = consentInformation != null
-                    && consentInformation.getPrivacyOptionsRequirementStatus() == ConsentInformation.PrivacyOptionsRequirementStatus.REQUIRED;
-            privacyOptionsButton.setVisibility(required ? View.VISIBLE : View.GONE);
-        });
-    }
-
-    private void showPrivacyOptions() {
-        if (consentInformation == null) return;
-        UserMessagingPlatform.showPrivacyOptionsForm(this, formError -> {
-            updatePrivacyOptionsButton();
-            if (consentInformation.canRequestAds()) initializeMobileAdsSdk();
-            else hideBanner();
-        });
     }
 
     private void requestNotificationPermissionIfNeeded() {

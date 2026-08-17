@@ -20,6 +20,7 @@ public class SecurePrefs {
     private static final String KEY_API = "key";
     private static final String KEY_BASE_SECURE = "base_secure";
     private static final String KEY_BASE_LEGACY = "base";
+    private static final String KEY_CHAT_WEB_URL = "chat_web_url_secure";
 
     private final Context context;
 
@@ -105,8 +106,20 @@ public class SecurePrefs {
         return legacy.trim();
     }
 
+    public void putChatWebUrl(String value) throws Exception {
+        putEncrypted(KEY_CHAT_WEB_URL, value == null ? "" : value.trim());
+    }
+
+    public String getChatWebUrl() {
+        return getEncrypted(KEY_CHAT_WEB_URL);
+    }
+
     public boolean isConfigured() {
         return !getBase().isEmpty() && !getKey().isEmpty();
+    }
+
+    public boolean isChatConfigured() {
+        return !getChatWebUrl().isEmpty();
     }
 
     public void clearConnection() {
@@ -114,6 +127,7 @@ public class SecurePrefs {
                 .remove(KEY_API)
                 .remove(KEY_BASE_SECURE)
                 .remove(KEY_BASE_LEGACY)
+                .remove(KEY_CHAT_WEB_URL)
                 .apply();
     }
 }

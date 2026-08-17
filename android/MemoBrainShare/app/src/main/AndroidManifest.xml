@@ -18,9 +18,14 @@
       android:icon="@drawable/ic_memobrain"
       android:theme="@style/AppTheme">
 
+    <!-- WebView API for Ads only. No native AdMob application ID is used. -->
     <meta-data
-        android:name="com.google.android.gms.ads.APPLICATION_ID"
-        android:value="${ADMOB_APP_ID}" />
+        android:name="com.google.android.gms.ads.INTEGRATION_MANAGER"
+        android:value="webview" />
+
+    <activity
+        android:name=".ChatActivity"
+        android:exported="false" />
 
     <activity android:name=".MainActivity" android:exported="true">
       <intent-filter>

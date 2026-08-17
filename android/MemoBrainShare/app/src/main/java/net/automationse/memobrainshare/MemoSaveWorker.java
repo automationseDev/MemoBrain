@@ -35,7 +35,8 @@ public class MemoSaveWorker extends Worker {
         PendingJobStore.deleteRecursively(workDir);
         workDir.mkdirs();
 
-        boolean terminal = false;
+        boolean deletePending = false;
+        HistoryStore.updateStatus(getApplicationContext(), jobId, HistoryStore.SENDING);
         try {
             SecurePrefs prefs = new SecurePrefs(getApplicationContext());
             String key = prefs.getKey();
@@ -44,7 +45,8 @@ public class MemoSaveWorker extends Worker {
 
             JSONObject job = PendingJobStore.read(getApplicationContext(), jobId);
             if (PendingJobStore.isExpired(job)) {
-                terminal = true;
+                deletePending = true;
+                HistoryStore.updateStatus(getApplicationContext(), jobId, HistoryStore.EXPIRED);
                 NotificationHelper.failure(getApplicationContext(), "送信待ちデータの保存期限が切れました");
                 return Result.failure();
             }
@@ -87,17 +89,21 @@ public class MemoSaveWorker extends Worker {
             }
 
             client.chat(query, refs);
-            terminal = true;
+            deletePending = true;
+            HistoryStore.updateStatus(getApplicationContext(), jobId, HistoryStore.SUCCESS);
             NotificationHelper.success(getApplicationContext());
             return Result.success();
         } catch (Exception e) {
-            if (getRunAttemptCount() < 2 && isRetryable(e)) return Result.retry();
-            terminal = true;
+            if (getRunAttemptCount() < 2 && isRetryable(e)) {
+                HistoryStore.updateStatus(getApplicationContext(), jobId, HistoryStore.QUEUED);
+                return Result.retry();
+            }
+            HistoryStore.updateStatus(getApplicationContext(), jobId, HistoryStore.FAILED);
             NotificationHelper.failure(getApplicationContext(), safeReason(e));
             return Result.failure();
         } finally {
             PendingJobStore.deleteRecursively(workDir);
-            if (terminal) PendingJobStore.delete(getApplicationContext(), jobId);
+            if (deletePending) PendingJobStore.delete(getApplicationContext(), jobId);
         }
     }
 
@@ -133,30 +139,30 @@ public class MemoSaveWorker extends Worker {
 
     private List<File> sampleVideo(File video, File workDir) throws Exception {
         ArrayList<File> out = new ArrayList<>();
-        MediaMetadataRetriever r = new MediaMetadataRetriever();
+        MediaMetadataRetriever retriever = new MediaMetadataRetriever();
         try {
-            r.setDataSource(video.getAbsolutePath());
+            retriever.setDataSource(video.getAbsolutePath());
             long durationMs = 0;
             try {
-                String raw = r.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION);
+                String raw = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION);
                 if (raw != null) durationMs = Long.parseLong(raw);
             } catch (Exception ignored) {}
 
             for (int i = 0; i < 6; i++) {
                 long us = durationMs > 0 ? (durationMs * 1000L * i / 5L) : i * 1_000_000L;
-                Bitmap b = r.getFrameAtTime(us, MediaMetadataRetriever.OPTION_CLOSEST_SYNC);
-                if (b != null) {
+                Bitmap bitmap = retriever.getFrameAtTime(us, MediaMetadataRetriever.OPTION_CLOSEST_SYNC);
+                if (bitmap != null) {
                     File frame = new File(workDir, "video_frame_" + i + ".jpg");
-                    try (FileOutputStream o = new FileOutputStream(frame)) {
-                        b.compress(Bitmap.CompressFormat.JPEG, 85, o);
+                    try (FileOutputStream output = new FileOutputStream(frame)) {
+                        bitmap.compress(Bitmap.CompressFormat.JPEG, 85, output);
                     } finally {
-                        b.recycle();
+                        bitmap.recycle();
                     }
                     out.add(frame);
                 }
             }
         } finally {
-            r.release();
+            retriever.release();
         }
         return out;
     }

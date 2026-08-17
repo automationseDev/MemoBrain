@@ -1,15 +1,24 @@
 # MemoBrain
 
-MemoBrain は、Android の共有メニューから URL、YouTube、テキスト、画像、PDF、文書、動画などを **自分で用意した Dify** に送り、個人用ナレッジとして整理・保存するセルフホスト向けアプリです。
+MemoBrain は、Android の共有メニューから URL、YouTube、テキスト、画像、PDF、文書、動画などを **自分で用意した Dify** に送り、個人用ナレッジとして整理・保存するセルフホスト向けアプリです。Dify の公開Web Appを Android アプリ内の WebView から開くAIチャット機能も備えます。
 
 > **Dify は必須です。MemoBrain 単体では保存機能を利用できません。**
 > 利用者自身の Dify 環境、MemoBrain 用 Dify DSL、Dify App API Key が必要です。
 
-## 配布方針
+## ダウンロード
 
-- **GitHub Releases**: APK と Dify DSL のメイン配布先
-- **Samsung Galaxy Store**: GitHub Releases と同じ applicationId / 同じ署名の正式 APK を掲載
-- Release ビルドの AdMob ID は利用者が変更できず、開発者のビルド時設定のみを使用
+正式版は **[GitHub Releases](https://github.com/automationseDev/MemoBrain/releases/latest)** だけで配布します。
+
+- AndroidにはReleaseページの署名済みAPKをインストールします
+- Difyには同じReleaseページの推奨DSLをインポートします
+- GitHub以外のアプリストアでは配布していません
+- APKのSHA-256はReleaseに添付する `SHA256SUMS.txt` で確認できます
+
+## 配布・広告方針
+
+- AndroidのネイティブAdMobバナーは使用しない
+- 広告は開発者管理の案内用HTTPS WebViewに表示し、利用者のDifyは別WebViewで直接開く
+- AdSense Publisher / Slot IDはAndroid APKへ埋め込まず、Webサーバー側だけで設定できる
 
 ## リポジトリ構成
 
@@ -17,6 +26,7 @@ MemoBrain は、Android の共有メニューから URL、YouTube、テキスト
 MemoBrain/
 ├─ android/MemoBrainShare/       Android アプリソース
 ├─ dify/                         Dify DSL 配布パッケージ
+├─ web/memobrain-ad/             案内 / AdSense専用Webページ
 ├─ docs/                         導入・公開・プライバシー資料
 ├─ scripts/                      Dify 疎通確認ツール
 ├─ .gitignore
@@ -27,13 +37,29 @@ MemoBrain/
 ## クイックスタート
 
 1. Dify を用意します。
-2. `dify/MemoBrain-v0.2.2-DifyPatch.zip` を展開し、収録された `MemoBrain_DifyOnly_v0.2.2.yml` を Dify にインポートします。
+2. `dify/MemoBrain_DifyOnly_v0.3.5.yml` を Dify にインポートします。Gemini公式Difyプラグイン `0.9.5` 以降が必要です。DuckDuckGo Searchプラグインは不要です。
 3. Dify 側の環境変数 `DIFY_API_BASE`、`KNOWLEDGE_API_KEY`、`DATASET_NAME` を設定します。
 4. MemoBrain の APK をインストールします。
 5. MemoBrain の「Dify接続設定」に Dify App API Base URL と App API Key を設定します。
-6. Android の共有メニューから MemoBrain を選択して保存します。
+6. 利用者自身のDify公開Web App URLを `Dify Web App URL` に設定します。広告ページへDify URLは送信されません。
+7. Android の共有メニューから MemoBrain を選択して保存します。AIチャットではまずKnowledgeを検索し、不足時はWeb検索から記事を生成してKnowledgeへ自動登録できます。
 
-詳細は [Difyセットアップ](docs/DIFY_SETUP.md) と [Android導入手順](docs/INSTALL_ANDROID.md) を参照してください。
+詳細は [Difyセットアップ](docs/DIFY_SETUP.md)、[Android導入手順](docs/INSTALL_ANDROID.md)、[Dify Web Chat / AdSense](docs/DIFY_WEB_CHAT.md) を参照してください。
+
+## Androidの送信管理
+
+- 送信履歴で送信待ち・送信中・成功・失敗・期限切れを確認
+- 失敗した送信は、暗号化済みデータが残る24時間以内に手動再送
+- URL正規化とファイルSHA-256による重複登録防止
+- 履歴には本文・URL・ファイル名・Difyレスポンスを保存せず、端末内で暗号化
+
+## ナレッジ補完エージェント
+
+Dify DSL v0.3.5では、質問に対して既存Knowledgeを先に検索します。検索結果がないか関連度が低い場合は一度停止して確認を表示し、利用者が `Web調査: 調べたい内容` と送信した場合だけGeminiのGoogle Search GroundingでWebを調査します。調査結果は参照URL付きの日本語記事へ整理して同じKnowledgeへ登録したうえで回答します。DuckDuckGoプラグインには依存しません。検索語句と生成対象は利用者がDifyに設定したGeminiサービスへ送信され、Geminiの利用枠を消費します。この外部検索はAIチャットから質問した場合にだけ動作し、Android共有による通常保存の経路は従来どおりです。
+
+### Geminiモデル自動切替
+
+LLM処理は `Gemini 3.6 Flash → Gemini 3.5 Flash → Gemini 2.5 Flash` の順で実行します。429、503などで上位モデルのノードが失敗した場合だけ次のモデルへ進み、成功した最初の出力を既存処理へ渡します。3モデルを利用するにはGemini公式Difyプラグイン `0.9.5` 以降が必要です。
 
 ## 必要環境
 
@@ -45,36 +71,41 @@ MemoBrain/
 
 ## プライバシー設計
 
-- Dify 接続 URL / App API Key は Android Keystore を利用して暗号化保存
+- Dify 接続 URL / App API Key / Dify Web App URL は Android Keystore を利用して暗号化保存
 - 送信待ちテキスト・共有ファイルはアプリ専用領域で AES-GCM 暗号化
-- 送信成功または最終失敗後に送信待ちデータを削除
+- 送信成功後に送信待ちデータを削除し、最終失敗時は再送用として最大24時間だけ暗号化保持
 - 未送信データも最大24時間で削除
 - Android バックアップ / データ移行バックアップを無効化
 - 平文 HTTP 接続を拒否
 - 共有内容をタスクスナップショットへ残しにくくする `FLAG_SECURE` を使用
 - 通知にメモ本文や Dify レスポンス本文を表示しない
-- AdMob の Advertising ID (`AD_ID`) 権限を削除
+- Google Mobile Ads SDK由来の Advertising ID (`AD_ID`) 権限を削除
 
 ただし、保存した内容は利用者自身が設定した Dify 環境へ送信・保存されます。Dify 側に保存されたデータは MemoBrain のアンインストールでは削除されません。
 
 詳しくは [プライバシーポリシー](docs/PRIVACY_POLICY_JA.md) を参照してください。
 
-## AdMob
+## WebView AdSense
 
-Debug ビルドは Google 公式テスト広告 ID を固定使用します。Release ビルドは `release-secrets.properties`、Gradle project property、または環境変数からビルド時に正式 ID を受け取ります。正式 ID は GitHub へコミットしません。
+MemoBrain はネイティブ AdMob バナーを使用しません。Google Mobile Ads SDK は `MobileAds.registerWebView()` による WebView API for Ads のためだけに残しています。
 
-```properties
-MEMOBRAIN_ADMOB_APP_ID=ca-app-pub-xxxxxxxxxxxxxxxx~xxxxxxxxxx
-MEMOBRAIN_ADMOB_BANNER_ID=ca-app-pub-xxxxxxxxxxxxxxxx/xxxxxxxxxx
+広告は `web/memobrain-ad/` をHTTPSで配備した開発者管理WebViewに表示します。利用者自身のDify公開Web Appは別WebViewで直接開くため、Dify URLが広告ページへ送信されることはありません。
+
+```javascript
+window.MEMOBRAIN_AD_CONFIG = {
+  adsenseClient: "ca-pub-...",
+  adsenseSlot: "...",
+  showAdPlaceholder: false
+};
 ```
 
-`release-secrets.properties.example` をテンプレートとして利用してください。
+`config.js` は `.gitignore` 対象です。広告IDをAPKへ埋め込む必要はなく、Dify URLを `config.js` に設定してはいけません。
 
 ## Android ビルド
 
 Debug APK は Windows で `android/MemoBrainShare/Build-MemoBrainApk.cmd` を実行できます。
 
-署名済み Release APK は、正式 AdMob ID と署名情報をローカル設定したうえで次を実行します。
+署名済み Release APK は署名情報をローカル設定したうえで次を実行します。
 
 ```text
 android/MemoBrainShare/Build-MemoBrainRelease.cmd
@@ -90,9 +121,8 @@ Android Studio で開く場合は `android/MemoBrainShare` を直接 Open して
 
 - Dify App API Key
 - Dify Knowledge Service API Key
-- `release-secrets.properties`
 - `signing-secrets.properties`
-- AdMob 本番 ID を含むローカル設定
+- `web/memobrain-ad/config.js`
 - `.jks` / `.keystore`
 - 署名パスワード
 - `local.properties`

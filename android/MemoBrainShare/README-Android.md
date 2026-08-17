@@ -1,33 +1,40 @@
-# MemoBrain Android v1.0.0
+# MemoBrain Android
 
-MemoBrain Share は、Android の共有メニューからテキスト・URL・画像・動画・PDF/文書を Dify に送信するためのクライアントです。
+MemoBrain Share は、Android の共有メニューからテキスト・URL・画像・動画・PDF/文書を Dify に送信し、アプリ内 WebView から Dify の公開Web Appを利用できるクライアントです。
 
 > **重要: Dify が必須です。**
 > このアプリ単体ではメモ保存機能は動作しません。利用者自身が用意した Dify 環境、対応 Chatflow、Dify App API Base、App API Key が必要です。
 
-## v1.0.0 のプライバシー設計
+## プライバシー設計
 
-- Dify API Base / API Key は APK に含めない
+- Dify API Base / API Key / Dify Web App URL は APK に含めない
 - Dify接続情報は Android Keystore を利用して端末内で暗号化
 - 共有テキスト・添付ファイルはバックグラウンド送信待ちの間だけアプリ専用領域へ AES-GCM 暗号化して保存
 - 送信時のみ `cacheDir` に復号し、アップロード直後に削除
-- 送信成功または最終失敗時に暗号化キューを削除
+- 送信成功時に暗号化キューを削除し、最終失敗時は手動再送のため最大24時間だけ保持
 - ネットワークが戻らない場合も最大24時間で送信待ちデータを削除する Cleanup Worker を登録
 - Androidバックアップ / 端末移行バックアップを無効化
-- HTTP平文通信を禁止し、Dify API Base は HTTPS のみ許可
-- `FLAG_SECURE` により共有内容・API設定画面のスクリーンショット/タスクスナップショットを抑止
+- HTTP平文通信を禁止し、Dify API Base / Dify Web App URL は HTTPS のみ許可
+- `FLAG_SECURE` により共有内容・API設定・チャット画面のスクリーンショット/タスクスナップショットを抑止
 - 通知本文にはメモ内容や Dify のレスポンス本文を表示しない
 - Difyエラー時もサーバーレスポンス本文を通知/ログへ出さない
 - 画面プレビューは共有テキストの先頭500文字まで
 - Google Mobile Ads SDK が追加する Android Advertising ID (`AD_ID`) 権限を manifest merge で削除
-- 広告IDのユーザー変更機能は廃止。正式版の広告IDはビルド時のみ組み込み
+
+### 広告設計
+
+MemoBrain はネイティブ AdMob バナーを使用しません。広告は開発者管理の案内用HTTPS Webページを表示する専用WebViewに配置し、利用者のDify公開Web Appは別のWebViewで直接表示します。
+
+Android側では `MobileAds.registerWebView()` のために Google Mobile Ads SDK を残しています。これは Google の WebView API for Ads 連携用で、APK に AdMob App ID / Banner Ad Unit ID を埋め込むためではありません。
+
+AdSenseのPublisher ID / Slot IDはAndroidビルド時に不要です。`web/memobrain-ad/config.js` をWebサーバー上だけで設定できます。このファイルはGit管理対象外です。
+
+WebView API for Ads はネイティブアプリ側の同意状態をWeb広告へ自動伝搬しないため、Web広告の同意/CMPはWebページ側で処理してください。
 
 ### 重要な境界
 
 端末内の一時データを残しにくくする設計ですが、MemoBrain の目的上、ユーザーが保存した内容は **設定した Dify に送信されます**。
 Dify の Knowledge、利用するLLM/プラグイン、ログ、バックアップ等にどの程度データが残るかは、利用者自身の Dify 構成と各サービスのポリシーに依存します。
-
-また、AdMob SDK 自体によるデータ処理はゼロにはできません。ストア申告時は、使用中の Google Mobile Ads SDK / UMP SDK の最新公式開示を確認してください。
 
 ## Debug APK のビルド
 
@@ -43,28 +50,17 @@ MemoBrainShare\Build-MemoBrainApk.cmd
 .\Build-MemoBrainApk.ps1
 ```
 
-Debugビルドは必ずGoogle公式テスト広告IDを使用します。
+DebugビルドにもネイティブAdMob IDは不要です。
 
 生成先:
 
 ```text
-MemoBrainShare\output\MemoBrain-v1.0.0-debug.apk
+MemoBrainShare\output\MemoBrain-v1.2.0-debug.apk
 ```
 
 ## 署名済み Release APK
 
-正式配布版では、AdMob ID と署名情報をローカルファイルから読み込みます。利用者が広告IDや署名情報を変更する画面はありません。
-
-### 1. AdMob
-
-`release-secrets.properties.example` を `release-secrets.properties` にコピーします。
-
-```properties
-MEMOBRAIN_ADMOB_APP_ID=ca-app-pub-xxxxxxxxxxxxxxxx~xxxxxxxxxx
-MEMOBRAIN_ADMOB_BANNER_ID=ca-app-pub-xxxxxxxxxxxxxxxx/xxxxxxxxxx
-```
-
-### 2. 署名情報
+正式配布版でローカル設定が必要なのは署名情報だけです。
 
 `signing-secrets.properties.example` を `signing-secrets.properties` にコピーします。
 
@@ -77,9 +73,9 @@ MEMOBRAIN_KEY_PASSWORD=your-key-password
 
 Windowsではkeystore pathを `/` 区切りにすると `.properties` のエスケープ問題を避けられます。
 
-`release-secrets.properties`、`signing-secrets.properties`、`.jks`、`.keystore` はGit管理対象外です。
+`signing-secrets.properties`、`.jks`、`.keystore` はGit管理対象外です。
 
-### 3. ビルド
+ビルド:
 
 ```text
 MemoBrainShare\Build-MemoBrainRelease.cmd
@@ -94,13 +90,11 @@ MemoBrainShare\Build-MemoBrainRelease.cmd
 成功すると:
 
 ```text
-MemoBrainShare\output\MemoBrain-v1.0.0-release.apk
+MemoBrainShare\output\MemoBrain-v1.2.0-release.apk
 MemoBrainShare\output\SHA256SUMS.txt
 ```
 
 を生成します。Android SDK の `apksigner.bat` を検出できた場合は署名検証も自動実行します。
-
-GitHub Releases と Samsung Galaxy Store には、この同じ Release APK を使用します。更新時も同じ keystore / alias を使い、`versionCode` を必ず増やしてください。
 
 詳しくは `docs/RELEASE_SIGNING.md` を参照してください。
 
@@ -108,20 +102,20 @@ GitHub Releases と Samsung Galaxy Store には、この同じ Release APK を�
 
 Releaseビルドでは以下の場合にビルドを停止します。
 
-- AdMob App IDが未設定
-- Banner Ad Unit IDが未設定
-- Google公式テスト広告IDが設定されている
-- AdMob ID形式が不正
 - keystore path / password / alias / key password が不足している
 - keystoreファイルが存在しない
 
-これにより、テスト広告や未署名APKを正式版として誤配布しにくくしています。
+ネイティブAdMobを廃止したため、AdMob App ID / Banner Ad Unit ID のチェックはありません。
 
-## AABを作る場合
+## AIチャット / AdSense Webページ
 
-Android Studioの **Build > Generate Signed App Bundle / APK** を使う方法に加え、同じ `signing-secrets.properties` を設定済みならGradleの `bundleRelease` でも同じ署名構成を利用できます。
+1. `web/memobrain-ad/` を開発者管理のHTTPS Webサーバーへ配置します。
+2. `config.example.js` をサーバー上で `config.js` としてコピーします。
+3. レイアウト確認中は `showAdPlaceholder: true` にすると広告位置が見えます。
+4. AdSenseを利用するときだけ `adsenseClient` / `adsenseSlot` をサーバー上の `config.js` に設定します。
+5. MemoBrainの `Dify Web App URL` には、利用者自身のDify公開Web App URLを直接設定します。
 
-署名鍵、keystore、パスワードはこのプロジェクト/ZIPへ保存しないでください。
+広告ページとDifyは別WebViewです。広告ページの `config.js` にDify URLを設定せず、利用者のDify URLが広告ページへ送信されることもありません。
 
 ## 初回利用
 
@@ -129,10 +123,19 @@ Android Studioの **Build > Generate Signed App Bundle / APK** を使う方法�
 2. `Dify接続設定（必須）`
 3. HTTPS の Dify API Base（例 `https://your-dify.example/v1`）を入力
 4. Dify App API Key を入力
-5. Androidの共有メニューから MemoBrain を選択
-6. `MemoBrainに保存` を押す
+5. 必要に応じて Dify Web App URL を入力
+6. Androidの共有メニューから MemoBrain を選択
+7. `MemoBrainに保存` を押す
 
 接続設定は端末内で暗号化され、削除ボタンから消去できます。
+
+## 送信履歴・再送・重複防止
+
+- 送信履歴画面で、送信待ち・送信中・成功・失敗・期限切れを確認できます。
+- 最終失敗した送信は、暗号化済み送信データが残っている24時間以内に再送できます。
+- 履歴はAndroid Keystoreを利用して暗号化し、本文、URL、ファイル名、Difyレスポンスは保存しません。
+- 正規化したURLとファイル内容のSHA-256を使い、履歴にある同一URL・同一ファイルの重複登録を止めます。
+- 履歴は最大100件・30日間です。履歴を消去すると重複判定情報も消去されます。
 
 ## Gradle / JDK
 
