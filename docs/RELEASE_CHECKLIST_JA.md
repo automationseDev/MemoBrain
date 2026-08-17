@@ -3,7 +3,7 @@
 ## 1. アプリ
 
 - [ ] applicationIdが `net.automationse.memobrainshare` のまま
-- [ ] versionNameが `1.2.0`、versionCodeが `9` 以上
+- [ ] versionNameが `1.3.0`、versionCodeが `10` 以上
 - [ ] v1.0.0と同じ正式署名でAPKを生成
 - [ ] Dify接続先、API Key、広告IDがAPKに入っていない
 - [ ] テキスト/URL/画像/PDF/動画のバックグラウンド保存を確認

@@ -1,11 +1,16 @@
 # Changelog
 
-## Develop
+## v1.3.0 - 2026-08-17
 
-- 正式版と共存できる `net.automationse.memobrainshare.dev` のDebugビルドを追加
-- クイックメモ、ファイル、AIチャット、履歴を開ける4×2ホーム画面ウィジェットを追加
-- ウィジェットへ送信待ち・失敗・最新送信状態を表示
-- ライト／ダークテーマ対応の角丸カードUIを追加
+- Android app version 1.3.0 / versionCode 10（v1.2.0から同一署名で更新可能）
+- 共有時の補足メモ、カテゴリ、タグ、重要度、あとで読む、TODO指定を追加
+- 複数のDify接続プロファイルとKnowledge切り替えを追加
+- 接続プロファイルをAndroid Keystore + AES-GCMで暗号化
+- バックグラウンド再送を送信時の接続プロファイルへ固定
+- ライト／ダークテーマ対応のモダンなカードUIへ刷新
+- 読み込み不具合があったホーム画面ウィジェットを削除
+- Dify DSL v0.3.6でAndroid共有メタデータの手動指定を優先
+- 正式版と共存できる `net.automationse.memobrainshare.dev` のDebugビルドを維持
 
 ## v1.2.0 - 2026-08-17
 

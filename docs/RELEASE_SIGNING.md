@@ -56,7 +56,7 @@ cd android\MemoBrainShare
 現在のブランチでは成功すると以下を生成します。
 
 ```text
-android/MemoBrainShare/output/MemoBrain-v1.2.0-release.apk
+android/MemoBrainShare/output/MemoBrain-v1.3.0-release.apk
 android/MemoBrainShare/output/SHA256SUMS.txt
 ```
 
