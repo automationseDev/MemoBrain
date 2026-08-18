@@ -171,7 +171,7 @@ try {
     $outputDir = Join-Path $ProjectRoot "output"
     New-Item -ItemType Directory -Path $outputDir -Force | Out-Null
 
-    $outputApk = Join-Path $outputDir "MemoBrain-v1.3.0-release.apk"
+    $outputApk = Join-Path $outputDir "MemoBrain-v1.3.1-release.apk"
     Copy-Item -LiteralPath $sourceApk -Destination $outputApk -Force
 
     $hash = (Get-FileHash -LiteralPath $outputApk -Algorithm SHA256).Hash.ToLowerInvariant()
