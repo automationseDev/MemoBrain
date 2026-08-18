@@ -66,6 +66,8 @@ public class MainActivity extends Activity {
     private ConnectionProfileStore profileStore;
     private final ArrayList<ConnectionProfileStore.Profile> profileChoices = new ArrayList<>();
     private final ExecutorService stagingExecutor = Executors.newSingleThreadExecutor();
+    private final Handler responseHandler = new Handler(Looper.getMainLooper());
+    private Runnable responseWatcher;
 
     @Override
     public void onCreate(Bundle b) {
@@ -90,6 +92,7 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onDestroy() {
+        if (responseWatcher != null) responseHandler.removeCallbacks(responseWatcher);
         stagingExecutor.shutdown();
         super.onDestroy();
     }
@@ -422,7 +425,7 @@ public class MainActivity extends Activity {
                     prioritySpinner.setSelection(0);
                     readLaterCheck.setChecked(false);
                     todoCheck.setChecked(false);
-                    if (isShareInvocation()) new Handler(Looper.getMainLooper()).postDelayed(this::finish, 700);
+                    watchSaveResult(jobId);
                 });
             } catch (Exception e) {
                 runOnUiThread(() -> {
@@ -436,6 +439,35 @@ public class MainActivity extends Activity {
                 });
             }
         });
+    }
+
+    private void watchSaveResult(String jobId) {
+        if (responseWatcher != null) responseHandler.removeCallbacks(responseWatcher);
+        responseWatcher = new Runnable() {
+            @Override
+            public void run() {
+                JSONArray items = HistoryStore.list(MainActivity.this);
+                for (int i = 0; i < items.length(); i++) {
+                    JSONObject item = items.optJSONObject(i);
+                    if (item == null || !jobId.equals(item.optString("job_id"))) continue;
+                    String itemStatus = item.optString("status");
+                    if (HistoryStore.SUCCESS.equals(itemStatus)) {
+                        String answer = item.optString("answer", "").trim();
+                        status.setText(answer.isEmpty() ? "MemoBrainへの保存が完了しました。" : answer);
+                        responseWatcher = null;
+                        return;
+                    }
+                    if (HistoryStore.FAILED.equals(itemStatus) || HistoryStore.EXPIRED.equals(itemStatus)) {
+                        status.setText("保存に失敗しました。送信履歴から状態を確認してください。");
+                        responseWatcher = null;
+                        return;
+                    }
+                    break;
+                }
+                responseHandler.postDelayed(this, 750);
+            }
+        };
+        responseHandler.post(responseWatcher);
     }
 
     private void showHistory() {
@@ -462,6 +494,15 @@ public class MainActivity extends Activity {
                 row.setText(format.format(new Date(createdAt)) + "  " + kind + "  " + historyStatus(itemStatus));
                 row.setPadding(0, dp(10), 0, dp(4));
                 list.addView(row);
+
+                String answer = item.optString("answer", "").trim();
+                if (!answer.isEmpty()) {
+                    TextView reply = new TextView(this);
+                    reply.setText(answer);
+                    reply.setTextIsSelectable(true);
+                    reply.setPadding(dp(8), dp(4), 0, dp(12));
+                    list.addView(reply);
+                }
 
                 if (HistoryStore.FAILED.equals(itemStatus)) {
                     Button retry = new Button(this);

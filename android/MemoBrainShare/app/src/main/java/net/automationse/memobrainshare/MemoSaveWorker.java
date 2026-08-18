@@ -91,10 +91,10 @@ public class MemoSaveWorker extends Worker {
                 }
             }
 
-            client.chat(query, refs);
+            String answer = client.chat(query, refs);
             deletePending = true;
-            HistoryStore.updateStatus(getApplicationContext(), jobId, HistoryStore.SUCCESS);
-            NotificationHelper.success(getApplicationContext());
+            HistoryStore.updateResult(getApplicationContext(), jobId, HistoryStore.SUCCESS, answer);
+            NotificationHelper.success(getApplicationContext(), !answer.isEmpty());
             return Result.success();
         } catch (Exception e) {
             if (getRunAttemptCount() < 2 && isRetryable(e)) {

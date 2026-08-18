@@ -31,11 +31,11 @@ public final class NotificationHelper {
         }
     }
 
-    public static void success(Context context) {
+    public static void success(Context context, boolean hasAnswer) {
         notify(context,
                 1001 + (int) (System.currentTimeMillis() % 100000),
                 "MemoBrainに保存しました",
-                "バックグラウンド保存が完了しました");
+                hasAnswer ? "Difyからの返信を送信履歴で確認できます" : "バックグラウンド保存が完了しました");
     }
 
     public static void failure(Context context, String safeReason) {

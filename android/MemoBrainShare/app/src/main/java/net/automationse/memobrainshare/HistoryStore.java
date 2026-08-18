@@ -14,7 +14,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.HashSet;
 import java.util.Set;
 
-/** Stores non-content delivery history encrypted at rest. */
+/** Stores delivery history and Dify replies encrypted at rest. */
 public final class HistoryStore {
     public static final String QUEUED = "queued";
     public static final String SENDING = "sending";
@@ -46,6 +46,10 @@ public final class HistoryStore {
     }
 
     public static void updateStatus(Context context, String jobId, String status) {
+        updateResult(context, jobId, status, null);
+    }
+
+    public static void updateResult(Context context, String jobId, String status, String answer) {
         synchronized (LOCK) {
             try {
                 JSONArray history = readInternal(context);
@@ -54,6 +58,9 @@ public final class HistoryStore {
                     if (item != null && jobId.equals(item.optString("job_id"))) {
                         item.put("status", status);
                         item.put("updated_at", System.currentTimeMillis());
+                        if (answer != null && !answer.trim().isEmpty()) {
+                            item.put("answer", answer.trim());
+                        }
                         break;
                     }
                 }

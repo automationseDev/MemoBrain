@@ -21,7 +21,7 @@
 ## Android
 
 - versionName: `1.3.0`
-- versionCode: `10`
+- versionCode: `11`
 - applicationId: `net.automationse.memobrainshare`
 - minSdk: 26
 - targetSdk: 36
