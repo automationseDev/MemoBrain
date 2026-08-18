@@ -8,11 +8,17 @@
 - `Web調査:` で始まる明示的な調査依頼を通常メモ保存より優先
 - Gemini GroundingによるWeb検索、記事生成、MemoBrain Knowledge登録を確認
 - Gemini 3.6 Flash、3.5 Flash、2.5 Flashのフォールバックを維持
+- Dify応答とWeb調査の確認メッセージをアプリ内に表示
+- ネイティブKnowledge検索、ナレッジ一覧、TODO、あとで読む管理
+- 情報不足時に確認付きボタンからWeb調査とKnowledge登録
+- ホーム画面とアプリ情報にバージョン、versionCode、アプリIDを表示
+- 脳とノートを組み合わせた新しいアプリアイコン
+- Release / Developの固定署名とUSB接続端末への上書きインストール
 
 ## Android
 
 - versionName: `1.3.1`
-- versionCode: `11`
+- versionCode: `12`
 - applicationId: `net.automationse.memobrainshare`
 - minSdk: 26
 - targetSdk: 36

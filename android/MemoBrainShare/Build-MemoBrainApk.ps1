@@ -4,6 +4,7 @@ param(
     [string]$JavaHome,
     [string]$AndroidSdk,
     [switch]$Clean,
+    [switch]$Install,
     [switch]$PrepareOnly,
     [switch]$ForceGradleDownload
 )
@@ -190,6 +191,14 @@ function Ensure-GradleWrapper {
 if (-not [string]::IsNullOrWhiteSpace($PSScriptRoot)) {$ProjectRoot=$PSScriptRoot} elseif ($MyInvocation.MyCommand.Path) {$ProjectRoot=Split-Path -Parent $MyInvocation.MyCommand.Path} else {$ProjectRoot=(Get-Location).Path}
 $ProjectRoot=(Resolve-Path -LiteralPath $ProjectRoot).Path
 Write-Host "MemoBrain APK Builder v1.0.0" -ForegroundColor Green
+$signingSecretsPath=Join-Path $ProjectRoot "signing-secrets.properties"
+if (Test-Path -LiteralPath $signingSecretsPath) {
+    Write-Host "Develop signing: persistent key configured in signing-secrets.properties" -ForegroundColor Cyan
+} elseif ($env:MEMOBRAIN_DEVELOP_KEYSTORE_PATH -or $env:MEMOBRAIN_KEYSTORE_PATH) {
+    Write-Host "Develop signing: persistent key configured through environment variables" -ForegroundColor Cyan
+} else {
+    Fail "Develop APK requires a persistent signing key for in-place updates. Copy signing-secrets.properties.example to signing-secrets.properties and configure the same keystore and alias used for previous Develop builds."
+}
 foreach ($required in @("settings.gradle.kts","build.gradle.kts","app\build.gradle.kts")) { if (-not (Test-Path (Join-Path $ProjectRoot $required))) { Fail "必要ファイルが見つかりません: $required" } }
 $javaInfo=Find-Java -ExplicitJavaHome $JavaHome; if (-not $javaInfo) { Fail "JDK 17～26を検出できませんでした。" }
 $env:JAVA_HOME=$javaInfo.JavaHome; $env:Path=(Join-Path $javaInfo.JavaHome "bin")+";"+$env:Path
@@ -203,3 +212,13 @@ Invoke-External $gradlewBat @("--no-daemon",":app:assembleDebug","--stacktrace")
 $sourceApk=Join-Path $ProjectRoot "app\build\outputs\apk\debug\app-debug.apk"; if (-not (Test-Path $sourceApk)) { Fail "APKが見つかりません。" }
 $outputDir=Join-Path $ProjectRoot "output"; New-Item -ItemType Directory -Path $outputDir -Force | Out-Null; $outputApk=Join-Path $outputDir $OutputApkName; Copy-Item $sourceApk $outputApk -Force
 Write-Host "MemoBrain APK ビルド成功: $outputApk" -ForegroundColor Green
+if ($Install) {
+    $adbPath=Join-Path $sdkPath "platform-tools\adb.exe"
+    if (-not (Test-Path -LiteralPath $adbPath)) { Fail "adb.exe が見つかりません。Android SDK Platform-Toolsをインストールしてください。" }
+    $deviceLines=@(& $adbPath devices | Select-Object -Skip 1 | Where-Object { $_ -match '\sdevice\s*$' })
+    if ($deviceLines.Count -eq 0) { Fail "接続済みAndroid端末がありません。USBデバッグを有効化し、端末側でUSBデバッグを許可してください。" }
+    if ($deviceLines.Count -gt 1) { Fail "複数のAndroid端末が接続されています。対象端末だけを接続してください。" }
+    Write-Host "Android端末へDevelop版を上書きインストールしています..." -ForegroundColor Cyan
+    Invoke-External $adbPath @("install","-r",$outputApk) $ProjectRoot
+    Write-Host "MemoBrain Develop のインストールが完了しました。" -ForegroundColor Green
+}

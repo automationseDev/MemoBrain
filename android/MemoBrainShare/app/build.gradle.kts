@@ -36,6 +36,24 @@ val releaseKeystoreFile = if (releaseKeystorePath.isNotEmpty()) {
     null
 }
 
+val explicitDevelopKeystorePath = secretValue("MEMOBRAIN_DEVELOP_KEYSTORE_PATH", signingSecrets)
+val explicitDevelopKeystorePassword = secretValue("MEMOBRAIN_DEVELOP_KEYSTORE_PASSWORD", signingSecrets)
+val explicitDevelopKeyAlias = secretValue("MEMOBRAIN_DEVELOP_KEY_ALIAS", signingSecrets)
+val explicitDevelopKeyPassword = secretValue("MEMOBRAIN_DEVELOP_KEY_PASSWORD", signingSecrets)
+val explicitDevelopSigningValues = listOf(
+    explicitDevelopKeystorePath,
+    explicitDevelopKeystorePassword,
+    explicitDevelopKeyAlias,
+    explicitDevelopKeyPassword
+)
+val explicitDevelopSigningConfigured = explicitDevelopSigningValues.any { it.isNotEmpty() }
+val explicitDevelopSigningReady = explicitDevelopSigningValues.all { it.isNotEmpty() }
+val developKeystoreFile = if (explicitDevelopKeystorePath.isNotEmpty()) {
+    rootProject.file(explicitDevelopKeystorePath)
+} else {
+    null
+}
+
 android {
     namespace = "net.automationse.memobrainshare"
     compileSdk = 36
@@ -44,7 +62,7 @@ android {
         applicationId = "net.automationse.memobrainshare"
         minSdk = 26
         targetSdk = 36
-        versionCode = 11
+        versionCode = 12
         versionName = "1.3.1"
         manifestPlaceholders["appLabel"] = "MemoBrain"
     }
@@ -58,6 +76,14 @@ android {
                 keyPassword = releaseKeyPassword
             }
         }
+        if (explicitDevelopSigningReady) {
+            create("develop") {
+                storeFile = developKeystoreFile
+                storePassword = explicitDevelopKeystorePassword
+                keyAlias = explicitDevelopKeyAlias
+                keyPassword = explicitDevelopKeyPassword
+            }
+        }
     }
 
     buildTypes {
@@ -65,6 +91,14 @@ android {
             applicationIdSuffix = ".dev"
             versionNameSuffix = "-develop"
             manifestPlaceholders["appLabel"] = "MemoBrain Develop"
+
+            // Reuse the configured persistent signing key so Develop APKs remain
+            // updateable across machines instead of relying on transient debug keys.
+            if (explicitDevelopSigningReady) {
+                signingConfig = signingConfigs.getByName("develop")
+            } else if (releaseSigningReady) {
+                signingConfig = signingConfigs.getByName("release")
+            }
 
             // No native AdMob unit IDs are compiled into MemoBrain.
             // Google Mobile Ads SDK is present only for WebView API for Ads.
@@ -113,6 +147,31 @@ val validateReleaseSigning by tasks.registering {
             fail("The configured MemoBrain keystore file does not exist: $releaseKeystorePath")
         }
     }
+}
+
+val validateDevelopSigning by tasks.registering {
+    group = "verification"
+    description = "Rejects incomplete signing configuration instead of silently changing the Develop signing key."
+
+    doLast {
+        if (explicitDevelopSigningConfigured && !explicitDevelopSigningReady) {
+            throw GradleException("Develop-specific signing settings are incomplete. Set all MEMOBRAIN_DEVELOP_KEYSTORE_PATH, MEMOBRAIN_DEVELOP_KEYSTORE_PASSWORD, MEMOBRAIN_DEVELOP_KEY_ALIAS, and MEMOBRAIN_DEVELOP_KEY_PASSWORD values.")
+        }
+        if (explicitDevelopSigningReady && (developKeystoreFile == null || !developKeystoreFile.isFile)) {
+            throw GradleException("The configured MemoBrain Develop keystore file does not exist: $explicitDevelopKeystorePath")
+        }
+        val signingValues = listOf(releaseKeystorePath, releaseKeystorePassword, releaseKeyAlias, releaseKeyPassword)
+        if (!explicitDevelopSigningReady && signingValues.any { it.isNotEmpty() } && !releaseSigningReady) {
+            throw GradleException("Develop signing settings are incomplete. Set all MEMOBRAIN_KEYSTORE_PATH, MEMOBRAIN_KEYSTORE_PASSWORD, MEMOBRAIN_KEY_ALIAS, and MEMOBRAIN_KEY_PASSWORD values to keep the signing certificate stable.")
+        }
+        if (!explicitDevelopSigningReady && releaseSigningReady && (releaseKeystoreFile == null || !releaseKeystoreFile.isFile)) {
+            throw GradleException("The configured MemoBrain Develop keystore file does not exist: $releaseKeystorePath")
+        }
+    }
+}
+
+tasks.matching { it.name == "assembleDebug" || it.name == "bundleDebug" }.configureEach {
+    dependsOn(validateDevelopSigning)
 }
 
 tasks.matching { it.name == "assembleRelease" || it.name == "bundleRelease" }.configureEach {

@@ -17,6 +17,7 @@ MemoBrain Share は、Android の共有メニューからテキスト・URL・�
 - HTTP平文通信を禁止し、Dify API Base / Dify Web App URL は HTTPS のみ許可
 - `FLAG_SECURE` により共有内容・API設定・チャット画面のスクリーンショット/タスクスナップショットを抑止
 - 通知本文にはメモ内容や Dify のレスポンス本文を表示しない
+- Difyの返信は送信結果画面と暗号化された送信履歴で確認できる
 - Difyエラー時もサーバーレスポンス本文を通知/ログへ出さない
 - 画面プレビューは共有テキストの先頭500文字まで
 - Google Mobile Ads SDK が追加する Android Advertising ID (`AD_ID`) 権限を manifest merge で削除
@@ -36,18 +37,11 @@ WebView API for Ads はネイティブアプリ側の同意状態をWeb広告へ
 端末内の一時データを残しにくくする設計ですが、MemoBrain の目的上、ユーザーが保存した内容は **設定した Dify に送信されます**。
 Dify の Knowledge、利用するLLM/プラグイン、ログ、バックアップ等にどの程度データが残るかは、利用者自身の Dify 構成と各サービスのポリシーに依存します。
 
-## Develop版とホーム画面ウィジェット
+## Develop版
 
-Debugビルドは `net.automationse.memobrainshare.dev`、表示名「MemoBrain Develop」として生成されます。正式版とは別アプリとして同時にインストールでき、接続設定・履歴・ウィジェットも分離されます。
+Debugビルドは `net.automationse.memobrainshare.dev`、表示名「MemoBrain Develop」として生成されます。正式版とは別アプリとして同時にインストールでき、接続設定・履歴も分離されます。ホーム画面ウィジェットは提供していません。
 
-4×2のホーム画面ウィジェットから次を実行できます。
-
-- クイックメモ入力
-- ファイル選択
-- Dify AIチャット
-- 送信履歴と状態確認
-
-ウィジェットはライト／ダークテーマへ対応します。
+Develop版をアンインストールせず更新するため、`signing-secrets.properties` に設定した固定keystoreとaliasで署名します。正式版とDevelop版は `applicationId` が異なるため、同じ署名鍵を使用しても共存できます。
 
 ## Debug APK のビルド
 
@@ -64,11 +58,18 @@ MemoBrainShare\Build-MemoBrainApk.cmd
 ```
 
 DebugビルドにもネイティブAdMob IDは不要です。
+`Build-MemoBrainApk.ps1` では、既存Develop版を継続更新できるように署名設定が必須です。
+
+USBデバッグを許可したAndroid端末へ、ビルド後にそのまま上書きインストールする場合:
+
+```powershell
+.\Build-MemoBrainApk.ps1 -Clean -Install
+```
 
 生成先:
 
 ```text
-MemoBrainShare\output\MemoBrain-v1.2.0-develop-debug.apk
+MemoBrainShare\output\MemoBrain-v1.3.1-develop-debug.apk
 ```
 
 ## 署名済み Release APK
@@ -103,7 +104,7 @@ MemoBrainShare\Build-MemoBrainRelease.cmd
 成功すると:
 
 ```text
-MemoBrainShare\output\MemoBrain-v1.2.0-release.apk
+MemoBrainShare\output\MemoBrain-v1.3.1-release.apk
 MemoBrainShare\output\SHA256SUMS.txt
 ```
 
@@ -146,9 +147,19 @@ Releaseビルドでは以下の場合にビルドを停止します。
 
 - 送信履歴画面で、送信待ち・送信中・成功・失敗・期限切れを確認できます。
 - 最終失敗した送信は、暗号化済み送信データが残っている24時間以内に再送できます。
-- 履歴はAndroid Keystoreを利用して暗号化し、本文、URL、ファイル名、Difyレスポンスは保存しません。
+- 履歴はAndroid Keystoreを利用して暗号化し、Difyの返信を送信状態と合わせて確認できます。共有本文、URL、ファイル名は保存しません。
 - 正規化したURLとファイル内容のSHA-256を使い、履歴にある同一URL・同一ファイルの重複登録を止めます。
 - 履歴は最大100件・30日間です。履歴を消去すると重複判定情報も消去されます。
+
+## ネイティブKnowledge管理
+
+- `検索`: Dify App APIでKnowledgeを直接検索します。
+- 情報不足時は `Webで調査してKnowledgeへ保存` を押し、確認後にGemini調査を実行できます。
+- `ナレッジ一覧`: 保存したメモを一覧表示し、各メモの詳細を確認します。
+- `TODO`: 未完了TODOを確認し、完了として更新できます。
+- `あとで読む`: 未読メモを確認し、読了として更新できます。
+- 画面上部でDify接続プロファイルを切り替えられます。
+- ホーム画面および `アプリ情報` からアプリのバージョン・versionCode・アプリIDを確認できます。
 
 ## Gradle / JDK
 

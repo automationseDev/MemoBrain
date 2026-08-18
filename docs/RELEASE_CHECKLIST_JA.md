@@ -3,11 +3,11 @@
 ## 1. アプリ
 
 - [ ] applicationIdが `net.automationse.memobrainshare` のまま
-- [ ] versionNameが `1.3.0`、versionCodeが `10` 以上
+- [ ] versionNameが `1.3.1`、versionCodeが `12` 以上
 - [ ] v1.0.0と同じ正式署名でAPKを生成
 - [ ] Dify接続先、API Key、広告IDがAPKに入っていない
 - [ ] テキスト/URL/画像/PDF/動画のバックグラウンド保存を確認
-- [ ] 送信履歴に本文・URL・ファイル名・Difyレスポンスが表示・保存されない
+- [ ] 送信履歴とDify返信が暗号化され、共有本文・URL・ファイル名が履歴に保存されない
 - [ ] 最終失敗した送信を24時間以内に履歴から再送できる
 - [ ] 同一URL（追跡パラメータ違いを含む）と同一ファイルが重複登録されない
 - [ ] 完全な空入力がエラーになりKnowledgeへ登録されない
@@ -15,9 +15,9 @@
 - [ ] 広告WebViewと利用者Dify WebViewが分離されている
 - [ ] 送信成功時と24時間経過時の一時データ削除を確認
 
-## 2. Dify DSL v0.3.5
+## 2. Dify DSL v0.3.7
 
-- [ ] `MemoBrain_DifyOnly_v0.3.5.yml` をテスト環境へインポート
+- [ ] `MemoBrain_DifyOnly_v0.3.7.yml` をテスト環境へインポート
 - [ ] Gemini公式Difyプラグイン `0.9.5` 以降をインストール
 - [ ] DuckDuckGoノード・DuckDuckGo Searchプラグインへの依存がない
 - [ ] Knowledgeにある質問がGroundingなしで回答される

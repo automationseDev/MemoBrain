@@ -85,7 +85,7 @@ public class DifyClient {
         return new JSONObject(body).getString("id");
     }
 
-    public void chat(String query, List<FileRef> files) throws Exception {
+    public String chat(String query, List<FileRef> files) throws Exception {
         JSONObject root = new JSONObject();
         root.put("inputs", new JSONObject());
         root.put("query", query);
@@ -115,8 +115,16 @@ public class DifyClient {
         }
 
         int code = c.getResponseCode();
-        readAll(code < 400 ? c.getInputStream() : c.getErrorStream());
+        String body = readAll(code < 400 ? c.getInputStream() : c.getErrorStream());
         if (code >= 300) throw new IOException("Dify Chat HTTP " + code);
+        JSONObject response = new JSONObject(body);
+        String answer = response.optString("answer", "").trim();
+        if (answer.isEmpty()) {
+            JSONObject dataObject = response.optJSONObject("data");
+            JSONObject outputs = dataObject == null ? response.optJSONObject("outputs") : dataObject.optJSONObject("outputs");
+            if (outputs != null) answer = outputs.optString("answer", outputs.optString("text", "")).trim();
+        }
+        return answer;
     }
 
     private String safeHeaderFileName(String value) {

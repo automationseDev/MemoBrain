@@ -15,7 +15,7 @@
       android:dataExtractionRules="@xml/data_extraction_rules"
       android:usesCleartextTraffic="false"
       android:label="${appLabel}"
-      android:icon="@drawable/ic_memobrain"
+      android:icon="@drawable/ic_memobrain_launcher"
       android:theme="@style/AppTheme">
 
     <!-- WebView API for Ads only. No native AdMob application ID is used. -->
@@ -26,6 +26,10 @@
 
     <activity
         android:name=".ChatActivity"
+        android:exported="false" />
+
+    <activity
+        android:name=".KnowledgeActivity"
         android:exported="false" />
 
     <activity android:name=".MainActivity" android:exported="true">

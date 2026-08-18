@@ -36,10 +36,33 @@ jobs:
         with:
           gradle-version: '9.5.1'
 
+      - name: Configure persistent Develop signing when repository secrets are available
+        env:
+          MEMOBRAIN_CI_KEYSTORE_BASE64: ${{ secrets.MEMOBRAIN_KEYSTORE_BASE64 }}
+          MEMOBRAIN_CI_KEYSTORE_PASSWORD: ${{ secrets.MEMOBRAIN_KEYSTORE_PASSWORD }}
+          MEMOBRAIN_CI_KEY_ALIAS: ${{ secrets.MEMOBRAIN_KEY_ALIAS }}
+          MEMOBRAIN_CI_KEY_PASSWORD: ${{ secrets.MEMOBRAIN_KEY_PASSWORD }}
+        run: |
+          if [ -z "$MEMOBRAIN_CI_KEYSTORE_BASE64" ]; then
+            echo "Persistent signing secrets are not configured; this run will only verify compilation."
+            exit 0
+          fi
+          test -n "$MEMOBRAIN_CI_KEYSTORE_PASSWORD"
+          test -n "$MEMOBRAIN_CI_KEY_ALIAS"
+          test -n "$MEMOBRAIN_CI_KEY_PASSWORD"
+          KEYSTORE_PATH="$RUNNER_TEMP/memobrain-develop.jks"
+          printf '%s' "$MEMOBRAIN_CI_KEYSTORE_BASE64" | base64 --decode > "$KEYSTORE_PATH"
+          echo "MEMOBRAIN_KEYSTORE_PATH=$KEYSTORE_PATH" >> "$GITHUB_ENV"
+          echo "MEMOBRAIN_KEYSTORE_PASSWORD=$MEMOBRAIN_CI_KEYSTORE_PASSWORD" >> "$GITHUB_ENV"
+          echo "MEMOBRAIN_KEY_ALIAS=$MEMOBRAIN_CI_KEY_ALIAS" >> "$GITHUB_ENV"
+          echo "MEMOBRAIN_KEY_PASSWORD=$MEMOBRAIN_CI_KEY_PASSWORD" >> "$GITHUB_ENV"
+          echo "MEMOBRAIN_PERSISTENT_SIGNING=true" >> "$GITHUB_ENV"
+
       - name: Build debug APK
         run: gradle --no-daemon :app:assembleDebug --stacktrace
 
       - name: Upload debug APK
+        if: env.MEMOBRAIN_PERSISTENT_SIGNING == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: MemoBrain-debug

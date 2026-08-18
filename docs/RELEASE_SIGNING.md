@@ -25,6 +25,19 @@ Windows のパスは `/` を使うと `.properties` のバックスラッシュ�
 
 `signing-secrets.properties`、`.jks`、`.keystore` はすべて Git の除外対象です。
 
+同じ設定はDevelop APKにも適用されます。正式版は `net.automationse.memobrainshare`、Develop版は `net.automationse.memobrainshare.dev` と別の `applicationId` なので共存できますが、それぞれを上書き更新するには、以前と同じkeystore・aliasと、より大きい `versionCode` が必要です。現在の `versionCode` は `12` です。
+
+すでにインストール済みのDevelop版が別のdebug鍵で署名されている場合は、その元の鍵を指定することでアンインストールを避けられます。
+
+```properties
+MEMOBRAIN_DEVELOP_KEYSTORE_PATH=C:/Users/yourname/.android/debug.keystore
+MEMOBRAIN_DEVELOP_KEYSTORE_PASSWORD=android
+MEMOBRAIN_DEVELOP_KEY_ALIAS=androiddebugkey
+MEMOBRAIN_DEVELOP_KEY_PASSWORD=android
+```
+
+Develop専用設定を省略すると正式版用の固定鍵が使われます。すでに配布されたAPKと異なる鍵へ変更すると、Androidの仕様上、上書き更新できません。
+
 ## 2. Release APK をビルド
 
 Windows では以下を実行します。
@@ -46,6 +59,12 @@ cd android\MemoBrainShare
 .\Build-MemoBrainRelease.ps1 -Clean
 ```
 
+USBデバッグを許可したAndroid端末へ、そのまま正式版を上書きインストールする場合:
+
+```powershell
+.\Build-MemoBrainRelease.ps1 -Clean -Install
+```
+
 内部では Gradle の `:app:assembleRelease` を実行します。Release ビルド時には次を検証します。
 
 - Keystore path / password / alias / key password がすべて設定されていること
@@ -56,7 +75,7 @@ cd android\MemoBrainShare
 現在のブランチでは成功すると以下を生成します。
 
 ```text
-android/MemoBrainShare/output/MemoBrain-v1.3.0-release.apk
+android/MemoBrainShare/output/MemoBrain-v1.3.1-release.apk
 android/MemoBrainShare/output/SHA256SUMS.txt
 ```
 
@@ -94,3 +113,16 @@ MEMOBRAIN_KEY_PASSWORD
 ```
 
 これにより、将来 GitHub Actions Secrets を使った自動署名にも移行できます。
+
+## 6. GitHub Actionsで更新可能なDevelop APKを配布する場合
+
+GitHub Actionsのdebug workflowは、次のRepository secretsがすべて設定されている場合のみ、固定署名済みDevelop APKを成果物として公開します。
+
+```text
+MEMOBRAIN_KEYSTORE_BASE64
+MEMOBRAIN_KEYSTORE_PASSWORD
+MEMOBRAIN_KEY_ALIAS
+MEMOBRAIN_KEY_PASSWORD
+```
+
+`MEMOBRAIN_KEYSTORE_BASE64` には、ローカルビルドで使用する同じkeystoreをBase64化した値を設定してください。固定署名が設定されていない場合、CIはビルド検証だけを行い、環境ごとに異なる署名のAPKは配布しません。keystoreやパスワードをリポジトリへコミットしないでください。

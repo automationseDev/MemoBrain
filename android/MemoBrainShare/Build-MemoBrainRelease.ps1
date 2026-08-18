@@ -2,7 +2,8 @@
 [CmdletBinding()]
 param(
     [string]$AndroidSdk,
-    [switch]$Clean
+    [switch]$Clean,
+    [switch]$Install
 )
 
 $ErrorActionPreference = "Stop"
@@ -226,6 +227,31 @@ try {
     Write-Host ("APK    : " + $outputApk)
     Write-Host ("SHA256 : " + $hash)
     Write-Host ("SUMS   : " + $shaFile)
+
+    if ($Install) {
+        $adbPath = Join-Path $sdkPath "platform-tools\adb.exe"
+        if (-not (Test-Path -LiteralPath $adbPath)) {
+            Fail "adb.exe was not found. Install Android SDK Platform-Tools."
+        }
+
+        $deviceLines = @(& $adbPath devices |
+            Select-Object -Skip 1 |
+            Where-Object { $_ -match '\sdevice\s*$' })
+
+        if ($deviceLines.Count -eq 0) {
+            Fail "No authorized Android device was found. Enable USB debugging and approve the connection on the device."
+        }
+        if ($deviceLines.Count -gt 1) {
+            Fail "Multiple Android devices are connected. Connect only the device you want to update."
+        }
+
+        Write-Host "Installing the signed Release APK on Android..." -ForegroundColor Cyan
+        & $adbPath install -r $outputApk
+        if ($LASTEXITCODE -ne 0) {
+            Fail "Android installation failed. Confirm the existing app uses the same release signing key."
+        }
+        Write-Host "MemoBrain Release was installed successfully." -ForegroundColor Green
+    }
 }
 finally {
     Pop-Location
