@@ -44,8 +44,8 @@ android {
         applicationId = "net.automationse.memobrainshare"
         minSdk = 26
         targetSdk = 36
-        versionCode = 10
-        versionName = "1.3.0"
+        versionCode = 11
+        versionName = "1.3.1"
         manifestPlaceholders["appLabel"] = "MemoBrain"
     }
 
