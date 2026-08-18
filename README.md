@@ -57,7 +57,10 @@ MemoBrain/
 - 送信履歴で送信待ち・送信中・成功・失敗・期限切れを確認
 - 失敗した送信は、暗号化済みデータが残る24時間以内に手動再送
 - URL正規化とファイルSHA-256による重複登録防止
-- 履歴には本文・URL・ファイル名・Difyレスポンスを保存せず、端末内で暗号化
+- 履歴とDify返信は端末内で暗号化し、共有本文・URL・ファイル名は履歴に保存しない
+- WebViewを開かずにKnowledge検索・ナレッジ一覧・TODO・あとで読むを利用可能
+- Knowledgeに情報がない場合、確認付きボタンからWeb調査とKnowledge保存を実行
+- ホーム画面とアプリ情報からバージョン、versionCode、ビルド種別を確認可能
 
 ## ナレッジ補完エージェント
 
@@ -114,7 +117,7 @@ Debug APKは正式版と競合しない開発専用パッケージです。
 - applicationId: `net.automationse.memobrainshare.dev`
 - アプリ名: `MemoBrain Develop`
 - versionName: `1.3.0-develop`
-- versionCode: `11`
+- versionCode: `12`
 - 正式版と同時インストール可能
 - `signing-secrets.properties` の固定署名鍵を使用してアンインストールせず更新可能
 - カード型のモダンな共有画面UIを利用可能

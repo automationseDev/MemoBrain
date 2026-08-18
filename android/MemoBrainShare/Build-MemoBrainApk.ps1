@@ -4,6 +4,7 @@ param(
     [string]$JavaHome,
     [string]$AndroidSdk,
     [switch]$Clean,
+    [switch]$Install,
     [switch]$PrepareOnly,
     [switch]$ForceGradleDownload
 )
@@ -211,3 +212,13 @@ Invoke-External $gradlewBat @("--no-daemon",":app:assembleDebug","--stacktrace")
 $sourceApk=Join-Path $ProjectRoot "app\build\outputs\apk\debug\app-debug.apk"; if (-not (Test-Path $sourceApk)) { Fail "APKが見つかりません。" }
 $outputDir=Join-Path $ProjectRoot "output"; New-Item -ItemType Directory -Path $outputDir -Force | Out-Null; $outputApk=Join-Path $outputDir $OutputApkName; Copy-Item $sourceApk $outputApk -Force
 Write-Host "MemoBrain APK ビルド成功: $outputApk" -ForegroundColor Green
+if ($Install) {
+    $adbPath=Join-Path $sdkPath "platform-tools\adb.exe"
+    if (-not (Test-Path -LiteralPath $adbPath)) { Fail "adb.exe が見つかりません。Android SDK Platform-Toolsをインストールしてください。" }
+    $deviceLines=@(& $adbPath devices | Select-Object -Skip 1 | Where-Object { $_ -match '\sdevice\s*$' })
+    if ($deviceLines.Count -eq 0) { Fail "接続済みAndroid端末がありません。USBデバッグを有効化し、端末側でUSBデバッグを許可してください。" }
+    if ($deviceLines.Count -gt 1) { Fail "複数のAndroid端末が接続されています。対象端末だけを接続してください。" }
+    Write-Host "Android端末へDevelop版を上書きインストールしています..." -ForegroundColor Cyan
+    Invoke-External $adbPath @("install","-r",$outputApk) $ProjectRoot
+    Write-Host "MemoBrain Develop のインストールが完了しました。" -ForegroundColor Green
+}

@@ -25,7 +25,7 @@ Windows のパスは `/` を使うと `.properties` のバックスラッシュ�
 
 `signing-secrets.properties`、`.jks`、`.keystore` はすべて Git の除外対象です。
 
-同じ設定はDevelop APKにも適用されます。正式版は `net.automationse.memobrainshare`、Develop版は `net.automationse.memobrainshare.dev` と別の `applicationId` なので共存できますが、それぞれを上書き更新するには、以前と同じkeystore・aliasと、より大きい `versionCode` が必要です。現在の `versionCode` は `11` です。
+同じ設定はDevelop APKにも適用されます。正式版は `net.automationse.memobrainshare`、Develop版は `net.automationse.memobrainshare.dev` と別の `applicationId` なので共存できますが、それぞれを上書き更新するには、以前と同じkeystore・aliasと、より大きい `versionCode` が必要です。現在の `versionCode` は `12` です。
 
 すでにインストール済みのDevelop版が別のdebug鍵で署名されている場合は、その元の鍵を指定することでアンインストールを避けられます。
 

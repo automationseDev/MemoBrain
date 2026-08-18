@@ -11,6 +11,9 @@
 - 送信時に選択したプロファイルをバックグラウンド再送でも維持
 - ホーム画面ウィジェットを削除
 - Dify DSL v0.3.6でAndroid共有メタデータを優先
+- WebView不要のネイティブKnowledge検索・一覧・TODO・あとで読む管理
+- 情報不足時に確認付きWeb調査ボタンからGemini調査とKnowledge登録
+- ホーム画面とアプリ情報でバージョン・versionCode・アプリIDを表示
 
 ## Dify更新
 
@@ -21,7 +24,7 @@
 ## Android
 
 - versionName: `1.3.0`
-- versionCode: `11`
+- versionCode: `12`
 - applicationId: `net.automationse.memobrainshare`
 - minSdk: 26
 - targetSdk: 36

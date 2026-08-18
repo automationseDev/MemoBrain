@@ -60,6 +60,12 @@ MemoBrainShare\Build-MemoBrainApk.cmd
 DebugビルドにもネイティブAdMob IDは不要です。
 `Build-MemoBrainApk.ps1` では、既存Develop版を継続更新できるように署名設定が必須です。
 
+USBデバッグを許可したAndroid端末へ、ビルド後にそのまま上書きインストールする場合:
+
+```powershell
+.\Build-MemoBrainApk.ps1 -Clean -Install
+```
+
 生成先:
 
 ```text
@@ -144,6 +150,16 @@ Releaseビルドでは以下の場合にビルドを停止します。
 - 履歴はAndroid Keystoreを利用して暗号化し、Difyの返信を送信状態と合わせて確認できます。共有本文、URL、ファイル名は保存しません。
 - 正規化したURLとファイル内容のSHA-256を使い、履歴にある同一URL・同一ファイルの重複登録を止めます。
 - 履歴は最大100件・30日間です。履歴を消去すると重複判定情報も消去されます。
+
+## ネイティブKnowledge管理
+
+- `検索`: Dify App APIでKnowledgeを直接検索します。
+- 情報不足時は `Webで調査してKnowledgeへ保存` を押し、確認後にGemini調査を実行できます。
+- `ナレッジ一覧`: 保存したメモを一覧表示し、各メモの詳細を確認します。
+- `TODO`: 未完了TODOを確認し、完了として更新できます。
+- `あとで読む`: 未読メモを確認し、読了として更新できます。
+- 画面上部でDify接続プロファイルを切り替えられます。
+- ホーム画面および `アプリ情報` からアプリのバージョン・versionCode・アプリIDを確認できます。
 
 ## Gradle / JDK
 

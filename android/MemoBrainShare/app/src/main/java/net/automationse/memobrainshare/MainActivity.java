@@ -122,6 +122,10 @@ public class MainActivity extends Activity {
         TextView subtitle = label("共有した情報を、あなたの第二の脳へ。", 15, secondaryText, Typeface.NORMAL);
         subtitle.setPadding(0, dp(7), 0, 0);
         hero.addView(subtitle);
+        TextView version = label("Version " + BuildConfig.VERSION_NAME + "  •  build " + BuildConfig.VERSION_CODE,
+                12, secondaryText, Typeface.NORMAL);
+        version.setPadding(0, dp(8), 0, 0);
+        hero.addView(version);
         TextView secure = label("🔒  暗号化キュー  •  HTTPS  •  最大24時間保持", 12, primary, Typeface.BOLD);
         secure.setPadding(0, dp(14), 0, 0);
         hero.addView(secure);
@@ -228,6 +232,17 @@ public class MainActivity extends Activity {
         shortcuts.addView(chat, chatParams);
         root.addView(shortcuts);
 
+        addKnowledgeShortcuts(root, surface, text, "⌕  検索", KnowledgeActivity.MODE_SEARCH,
+                "☰  ナレッジ一覧", KnowledgeActivity.MODE_LIST);
+        addKnowledgeShortcuts(root, surface, text, "✓  TODO", KnowledgeActivity.MODE_TODO,
+                "◷  あとで読む", KnowledgeActivity.MODE_READ_LATER);
+
+        Button about = new Button(this);
+        about.setText("アプリ情報  •  v" + BuildConfig.VERSION_NAME);
+        styleButton(about, Color.TRANSPARENT, primary, false);
+        about.setOnClickListener(v -> showAbout());
+        root.addView(about, cardParams(0, 6, 0, 0));
+
         Button connection = new Button(this);
         connection.setText("接続プロファイルを管理");
         styleButton(connection, Color.TRANSPARENT, primary, false);
@@ -243,6 +258,49 @@ public class MainActivity extends Activity {
         scroll.addView(root, new ScrollView.LayoutParams(-1, -2));
         outer.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1f));
         setContentView(outer);
+    }
+
+    private void addKnowledgeShortcuts(LinearLayout parent, int surfaceColor, int textColor,
+                                       String firstLabel, String firstMode, String secondLabel, String secondMode) {
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setPadding(0, dp(8), 0, 0);
+        Button first = new Button(this);
+        first.setText(firstLabel);
+        styleButton(first, surfaceColor, textColor, false);
+        first.setOnClickListener(v -> openKnowledge(firstMode));
+        row.addView(first, new LinearLayout.LayoutParams(0, dp(50), 1f));
+        Button second = new Button(this);
+        second.setText(secondLabel);
+        styleButton(second, surfaceColor, textColor, false);
+        second.setOnClickListener(v -> openKnowledge(secondMode));
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(0, dp(50), 1f);
+        params.setMargins(dp(8), 0, 0, 0);
+        row.addView(second, params);
+        parent.addView(row);
+    }
+
+    private void openKnowledge(String mode) {
+        ConnectionProfileStore.Profile selected = profileStore.selected();
+        if (selected == null || !selected.isConfigured()) {
+            connectionSettings();
+            return;
+        }
+        Intent intent = new Intent(this, KnowledgeActivity.class);
+        intent.putExtra(KnowledgeActivity.EXTRA_MODE, mode);
+        startActivity(intent);
+    }
+
+    private void showAbout() {
+        String type = BuildConfig.DEBUG ? "Develop版" : "Release版";
+        new AlertDialog.Builder(this)
+                .setTitle("MemoBrainについて")
+                .setMessage("バージョン: " + BuildConfig.VERSION_NAME
+                        + "\nバージョンコード: " + BuildConfig.VERSION_CODE
+                        + "\nビルド種別: " + type
+                        + "\nアプリID: " + getPackageName())
+                .setPositiveButton("閉じる", null)
+                .show();
     }
 
     private boolean darkMode() {
