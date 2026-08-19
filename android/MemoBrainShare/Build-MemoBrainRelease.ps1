@@ -172,7 +172,13 @@ try {
     $outputDir = Join-Path $ProjectRoot "output"
     New-Item -ItemType Directory -Path $outputDir -Force | Out-Null
 
-    $outputApk = Join-Path $outputDir "MemoBrain-v1.3.1-release.apk"
+    $buildGradle = Join-Path $ProjectRoot "app\build.gradle.kts"
+    $versionMatch = Select-String -LiteralPath $buildGradle -Pattern 'versionName\s*=\s*"([^"]+)"' | Select-Object -First 1
+    if (-not $versionMatch) {
+        Fail ("versionName was not found in: " + $buildGradle)
+    }
+    $appVersion = $versionMatch.Matches[0].Groups[1].Value
+    $outputApk = Join-Path $outputDir ("MemoBrain-v{0}-release.apk" -f $appVersion)
     Copy-Item -LiteralPath $sourceApk -Destination $outputApk -Force
 
     $hash = (Get-FileHash -LiteralPath $outputApk -Algorithm SHA256).Hash.ToLowerInvariant()
