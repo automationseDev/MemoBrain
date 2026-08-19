@@ -86,8 +86,12 @@ public class DifyClient {
     }
 
     public String chat(String query, List<FileRef> files) throws Exception {
+        return chat(query, files, new JSONObject());
+    }
+
+    public String chat(String query, List<FileRef> files, JSONObject inputs) throws Exception {
         JSONObject root = new JSONObject();
-        root.put("inputs", new JSONObject());
+        root.put("inputs", inputs == null ? new JSONObject() : inputs);
         root.put("query", query);
         root.put("response_mode", "blocking");
         root.put("conversation_id", "");

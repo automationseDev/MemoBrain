@@ -23,6 +23,9 @@ import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import org.json.JSONArray;
+import org.json.JSONObject;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -46,6 +49,8 @@ public final class KnowledgeActivity extends Activity {
     private ConnectionProfileStore profileStore;
     private Spinner profileSpinner;
     private EditText searchField;
+    private EditText categoryField;
+    private EditText tagField;
     private LinearLayout results;
     private TextView heading;
     private ProgressBar progress;
@@ -148,6 +153,17 @@ public final class KnowledgeActivity extends Activity {
         rowParams.setMargins(0, dp(14), 0, dp(12));
         shell.addView(searchRow, rowParams);
 
+        LinearLayout filterRow = new LinearLayout(this);
+        categoryField = filterField("カテゴリ（任意）");
+        filterRow.addView(categoryField, new LinearLayout.LayoutParams(0, dp(44), 1f));
+        tagField = filterField("タグ（任意）");
+        LinearLayout.LayoutParams tagParams = new LinearLayout.LayoutParams(0, dp(44), 1f);
+        tagParams.setMargins(dp(8), 0, 0, 0);
+        filterRow.addView(tagField, tagParams);
+        LinearLayout.LayoutParams filterParams = new LinearLayout.LayoutParams(-1, dp(44));
+        filterParams.setMargins(0, 0, 0, dp(12));
+        shell.addView(filterRow, filterParams);
+
         heading = text("", 16, true);
         shell.addView(heading);
         progress = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
@@ -186,13 +202,13 @@ public final class KnowledgeActivity extends Activity {
         results.removeAllViews();
         if (MODE_LIST.equals(mode)) {
             heading.setText("保存したナレッジ");
-            execute("最近のメモを一覧表示して", false);
+            executeAction("knowledge_list", "");
         } else if (MODE_TODO.equals(mode)) {
             heading.setText("未完了のTODO");
-            execute("Knowledgeから未完了のTODOを検索して、TODOのタイトルと内容を教えて", false);
+            executeAction("todo_list", "");
         } else if (MODE_READ_LATER.equals(mode)) {
             heading.setText("あとで読む");
-            execute("Knowledgeから、あとで読むとして保存した未読の記事やメモを検索して教えて", false);
+            executeAction("read_later_list", "");
         } else {
             mode = MODE_SEARCH;
             heading.setText("Knowledge検索");
@@ -209,10 +225,26 @@ public final class KnowledgeActivity extends Activity {
         mode = MODE_SEARCH;
         lastSearch = query;
         heading.setText("検索結果");
-        execute("Knowledgeに保存済みの情報から次の質問に回答して: " + query, true);
+        executeAction("knowledge_search", query);
+    }
+
+    private void executeAction(String action, String query) {
+        JSONObject inputs = new JSONObject();
+        try {
+            inputs.put("action", action);
+            inputs.put("query", query == null ? "" : query.trim());
+            inputs.put("category", categoryField == null ? "" : categoryField.getText().toString().trim());
+            inputs.put("tag", tagField == null ? "" : tagField.getText().toString().trim());
+        } catch (Exception ignored) {
+        }
+        executeRequest(query == null || query.trim().isEmpty() ? action : query, inputs, false);
     }
 
     private void execute(String query, boolean canResearch) {
+        executeRequest(query, new JSONObject(), canResearch);
+    }
+
+    private void executeRequest(String query, JSONObject inputs, boolean canResearch) {
         ConnectionProfileStore.Profile profile = selectedProfile();
         if (profile == null || !profile.isConfigured()) {
             results.removeAllViews();
@@ -225,7 +257,7 @@ public final class KnowledgeActivity extends Activity {
         addMessage("Difyへ問い合わせています…");
         executor.execute(() -> {
             try {
-                String answer = new DifyClient(profile.base, profile.key).chat(query, Collections.emptyList());
+                String answer = new DifyClient(profile.base, profile.key).chat(query, Collections.emptyList(), inputs);
                 runOnUiThread(() -> {
                     if (isFinishing() || isDestroyed()) return;
                     progress.setVisibility(View.GONE);
@@ -249,6 +281,7 @@ public final class KnowledgeActivity extends Activity {
             addMessage("Difyから表示できる回答が返されませんでした。");
             return;
         }
+        if (showStructuredAnswer(value)) return;
         addMessage(value);
         if (canResearch && needsResearch(value) && !lastSearch.isEmpty()) {
             Button research = button("🌐 Webで調査してKnowledgeへ保存", true);
@@ -259,6 +292,33 @@ public final class KnowledgeActivity extends Activity {
         }
         if (MODE_LIST.equals(mode) || MODE_TODO.equals(mode) || MODE_READ_LATER.equals(mode)) {
             addManagementActions(value);
+        }
+    }
+
+    private boolean showStructuredAnswer(String value) {
+        try {
+            JSONObject payload = new JSONObject(value);
+            if (payload.optInt("version", 0) != 1) return false;
+            String action = payload.optString("action", "");
+            String message = payload.optString("message", "").trim();
+            if (!message.isEmpty()) addMessage(message);
+            JSONArray items = payload.optJSONArray("items");
+            if (items != null) {
+                for (int index = 0; index < items.length(); index++) {
+                    JSONObject item = items.optJSONObject(index);
+                    if (item == null) continue;
+                    String title = item.optString("title", "(無題)");
+                    String preview = item.optString("preview", "").trim();
+                    addItemActions(title, preview);
+                }
+            }
+            if ((items == null || items.length() == 0)
+                    && ("todo_list".equals(action) || "read_later_list".equals(action))) {
+                addManualManagement();
+            }
+            return true;
+        } catch (Exception ignored) {
+            return false;
         }
     }
 
@@ -294,26 +354,33 @@ public final class KnowledgeActivity extends Activity {
     }
 
     private void addItemActions(String title) {
+        addItemActions(title, "");
+    }
+
+    private void addItemActions(String title, String preview) {
         LinearLayout card = new LinearLayout(this);
         card.setOrientation(LinearLayout.VERTICAL);
         card.setPadding(dp(12), dp(10), dp(12), dp(10));
         card.setBackground(background(surface));
         card.addView(text(title, 14, true));
+        if (!preview.isEmpty()) {
+            TextView summary = text(preview, 12, false);
+            summary.setPadding(0, dp(5), 0, dp(7));
+            card.addView(summary);
+        }
         LinearLayout actions = new LinearLayout(this);
         Button detail = button("詳細", false);
         detail.setOnClickListener(view -> {
             mode = MODE_SEARCH;
             lastSearch = title;
             heading.setText("ナレッジ詳細");
-            execute("「" + title + "」というメモの内容を詳しく教えて", true);
+            executeAction("knowledge_detail", title);
         });
         actions.addView(detail, new LinearLayout.LayoutParams(0, dp(42), 1f));
         if (MODE_TODO.equals(mode) || MODE_READ_LATER.equals(mode)) {
             boolean todo = MODE_TODO.equals(mode);
             Button complete = button(todo ? "完了にする" : "読了にする", true);
-            complete.setOnClickListener(view -> execute(todo
-                    ? "「" + title + "」のTODOを完了にして"
-                    : "「" + title + "」を読了として更新して。あとで読むを解除して", false));
+            complete.setOnClickListener(view -> executeAction(todo ? "todo_complete" : "read_later_complete", title));
             LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(0, dp(42), 1f);
             params.setMargins(dp(8), 0, 0, 0);
             actions.addView(complete, params);
@@ -335,9 +402,7 @@ public final class KnowledgeActivity extends Activity {
                     .setView(input)
                     .setPositiveButton("実行", (dialog, which) -> {
                         String title = input.getText().toString().trim();
-                        if (!title.isEmpty()) execute(todo
-                                ? "「" + title + "」のTODOを完了にして"
-                                : "「" + title + "」を読了として更新して。あとで読むを解除して", false);
+                        if (!title.isEmpty()) executeAction(todo ? "todo_complete" : "read_later_complete", title);
                     })
                     .setNegativeButton("キャンセル", null)
                     .show();
@@ -353,6 +418,18 @@ public final class KnowledgeActivity extends Activity {
         body.setPadding(dp(14), dp(14), dp(14), dp(14));
         body.setBackground(background(surface));
         results.addView(body, new LinearLayout.LayoutParams(-1, -2));
+    }
+
+    private EditText filterField(String hint) {
+        EditText field = new EditText(this);
+        field.setHint(hint);
+        field.setHintTextColor(muted);
+        field.setTextColor(foreground);
+        field.setSingleLine(true);
+        field.setTextSize(13);
+        field.setBackground(background(surface));
+        field.setPadding(dp(10), 0, dp(10), 0);
+        return field;
     }
 
     private void refreshProfiles() {

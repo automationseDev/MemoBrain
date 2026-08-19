@@ -3,7 +3,7 @@
 ## 1. アプリ
 
 - [ ] applicationIdが `net.automationse.memobrainshare` のまま
-- [ ] versionNameが `1.3.1`、versionCodeが `12` 以上
+- [ ] versionNameが `1.4.0`、versionCodeが `13` 以上
 - [ ] v1.0.0と同じ正式署名でAPKを生成
 - [ ] Dify接続先、API Key、広告IDがAPKに入っていない
 - [ ] テキスト/URL/画像/PDF/動画のバックグラウンド保存を確認
@@ -15,9 +15,9 @@
 - [ ] 広告WebViewと利用者Dify WebViewが分離されている
 - [ ] 送信成功時と24時間経過時の一時データ削除を確認
 
-## 2. Dify DSL v0.3.7
+## 2. Dify DSL v0.3.8
 
-- [ ] `MemoBrain_DifyOnly_v0.3.7.yml` をテスト環境へインポート
+- [ ] `MemoBrain_DifyOnly_v0.3.8.yml` をテスト環境へインポート
 - [ ] Gemini公式Difyプラグイン `0.9.5` 以降をインストール
 - [ ] DuckDuckGoノード・DuckDuckGo Searchプラグインへの依存がない
 - [ ] Knowledgeにある質問がGroundingなしで回答される
