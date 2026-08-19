@@ -1,5 +1,6 @@
 package net.automationse.memobrainshare;
 
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
@@ -11,6 +12,8 @@ import android.view.Gravity;
 import android.view.View;
 import android.view.WindowInsets;
 import android.view.WindowManager;
+import android.window.OnBackInvokedCallback;
+import android.window.OnBackInvokedDispatcher;
 import android.webkit.CookieManager;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
@@ -38,6 +41,7 @@ public class ChatActivity extends Activity {
     private ValueCallback<Uri[]> fileUploadCallback;
     private String difyAllowedHost = "";
     private String adAllowedHost = "";
+    private OnBackInvokedCallback backCallback;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -59,6 +63,12 @@ public class ChatActivity extends Activity {
         buildUi();
         configureAdWebView();
         configureDifyWebView();
+
+        if (Build.VERSION.SDK_INT >= 33) {
+            backCallback = this::handleBack;
+            getOnBackInvokedDispatcher().registerOnBackInvokedCallback(
+                    OnBackInvokedDispatcher.PRIORITY_DEFAULT, backCallback);
+        }
 
         adWebView.loadUrl(AD_CONTENT_URL);
         difyWebView.loadUrl(difyUrl);
@@ -272,14 +282,24 @@ public class ChatActivity extends Activity {
     }
 
     @Override
+    @SuppressLint("GestureBackNavigation")
     @SuppressWarnings("deprecation")
     public void onBackPressed() {
+        handleBack();
+    }
+
+    @SuppressWarnings("deprecation")
+    private void handleBack() {
         if (difyWebView != null && difyWebView.canGoBack()) difyWebView.goBack();
-        else super.onBackPressed();
+        else finishAfterTransition();
     }
 
     @Override
     protected void onDestroy() {
+        if (Build.VERSION.SDK_INT >= 33 && backCallback != null) {
+            getOnBackInvokedDispatcher().unregisterOnBackInvokedCallback(backCallback);
+            backCallback = null;
+        }
         if (fileUploadCallback != null) {
             fileUploadCallback.onReceiveValue(null);
             fileUploadCallback = null;

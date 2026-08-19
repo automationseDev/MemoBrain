@@ -9,6 +9,7 @@ MemoBrain Share は、Android の共有メニューからテキスト・URL・�
 
 - Dify API Base / API Key / Dify Web App URL は APK に含めない
 - Dify接続情報は Android Keystore を利用して端末内で暗号化
+- ナレッジのローカルキャッシュと検索履歴も Android Keystore を利用して端末内で暗号化
 - 共有テキスト・添付ファイルはバックグラウンド送信待ちの間だけアプリ専用領域へ AES-GCM 暗号化して保存
 - 送信時のみ `cacheDir` に復号し、アップロード直後に削除
 - 送信成功時に暗号化キューを削除し、最終失敗時は手動再送のため最大24時間だけ保持
@@ -39,7 +40,16 @@ Dify の Knowledge、利用するLLM/プラグイン、ログ、バックアッ�
 
 ## Develop版
 
-Debugビルドは `net.automationse.memobrainshare.dev`、表示名「MemoBrain Develop」として生成されます。正式版とは別アプリとして同時にインストールでき、接続設定・履歴も分離されます。ホーム画面ウィジェットは提供していません。
+Debugビルドは `net.automationse.memobrainshare.dev`、表示名「MemoBrain Develop」として生成されます。正式版とは別アプリとして同時にインストールでき、接続設定・履歴も分離されます。
+
+## v1.5.0 ナレッジ機能
+
+- 取得済みの一覧・詳細・検索結果を暗号化キャッシュからオフライン表示
+- オンライン復帰時に自動同期し、同期日時と状態を表示
+- 最大20件の暗号化検索履歴
+- 更新日時・タイトルによる並び替え
+- カテゴリ・タグを指定する絞り込みUI
+- 検索・一覧・TODO・あとで読むを直接開くホーム画面ウィジェット
 
 Develop版をアンインストールせず更新するため、`signing-secrets.properties` に設定した固定keystoreとaliasで署名します。正式版とDevelop版は `applicationId` が異なるため、同じ署名鍵を使用しても共存できます。
 
@@ -69,7 +79,7 @@ USBデバッグを許可したAndroid端末へ、ビルド後にそのまま上�
 生成先:
 
 ```text
-MemoBrainShare\output\MemoBrain-v1.4.0-develop-debug.apk
+MemoBrainShare\output\MemoBrain-v1.5.0-develop-debug.apk
 ```
 
 ## 署名済み Release APK
@@ -104,7 +114,7 @@ MemoBrainShare\Build-MemoBrainRelease.cmd
 成功すると:
 
 ```text
-MemoBrainShare\output\MemoBrain-v1.4.0-release.apk
+MemoBrainShare\output\MemoBrain-v1.5.0-release.apk
 MemoBrainShare\output\SHA256SUMS.txt
 ```
 
