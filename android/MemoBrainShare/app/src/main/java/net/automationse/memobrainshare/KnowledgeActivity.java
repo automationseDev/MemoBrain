@@ -3,6 +3,10 @@ package net.automationse.memobrainshare;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.res.Configuration;
+import android.content.Context;
+import android.net.ConnectivityManager;
+import android.net.Network;
+import android.net.NetworkCapabilities;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
@@ -28,7 +32,10 @@ import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
+import java.text.DateFormat;
+import java.util.Date;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.regex.Matcher;
@@ -43,10 +50,12 @@ public final class KnowledgeActivity extends Activity {
     public static final String MODE_READ_LATER = "read_later";
 
     private static final Pattern LIST_ENTRY = Pattern.compile("^\\s*\\d+[.．、]\\s*(.+?)\\s*(?:\\([0-9]{2}/[0-9]{2}\\s+[0-9]{2}:[0-9]{2}\\))?\\s*$");
+    private static final Pattern ITEM_DATE = Pattern.compile("(?i)(?:updated_at:\\s*)?([0-9]{4}[-/][0-9]{2}[-/][0-9]{2}(?:[ T][0-9]{2}:[0-9]{2}(?::[0-9]{2})?)?)");
 
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
     private final ArrayList<ConnectionProfileStore.Profile> profiles = new ArrayList<>();
     private ConnectionProfileStore profileStore;
+    private KnowledgeLocalStore localStore;
     private Spinner profileSpinner;
     private EditText searchField;
     private EditText categoryField;
@@ -54,6 +63,11 @@ public final class KnowledgeActivity extends Activity {
     private LinearLayout results;
     private TextView heading;
     private ProgressBar progress;
+    private TextView syncStatus;
+    private Spinner sortSpinner;
+    private JSONArray visibleItems = new JSONArray();
+    private String visibleMessage = "";
+    private String visibleAction = "";
     private String mode = MODE_SEARCH;
     private String lastSearch = "";
     private int surface;
@@ -67,6 +81,7 @@ public final class KnowledgeActivity extends Activity {
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);
         profileStore = new ConnectionProfileStore(this);
         profileStore.migrate(new SecurePrefs(this));
+        localStore = new KnowledgeLocalStore(this);
         String requested = getIntent().getStringExtra(EXTRA_MODE);
         if (requested != null && !requested.trim().isEmpty()) mode = requested;
         buildUi();
@@ -164,6 +179,39 @@ public final class KnowledgeActivity extends Activity {
         filterParams.setMargins(0, 0, 0, dp(12));
         shell.addView(filterRow, filterParams);
 
+        LinearLayout toolsRow = new LinearLayout(this);
+        sortSpinner = new Spinner(this);
+        sortSpinner.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item,
+                new String[]{"新しい順", "タイトル順", "タイトル逆順"}));
+        toolsRow.addView(sortSpinner, new LinearLayout.LayoutParams(0, dp(44), 1f));
+        Button apply = button("絞り込み", false);
+        apply.setOnClickListener(view -> {
+            if (MODE_SEARCH.equals(mode) && searchField.getText() != null && !searchField.getText().toString().trim().isEmpty()) search();
+            else selectMode(mode);
+        });
+        LinearLayout.LayoutParams applyParams = new LinearLayout.LayoutParams(dp(100), dp(44));
+        applyParams.setMargins(dp(8), 0, 0, 0);
+        toolsRow.addView(apply, applyParams);
+        Button history = button("履歴", false);
+        history.setOnClickListener(view -> showSearchHistory());
+        LinearLayout.LayoutParams historyParams = new LinearLayout.LayoutParams(dp(76), dp(44));
+        historyParams.setMargins(dp(8), 0, 0, 0);
+        toolsRow.addView(history, historyParams);
+        shell.addView(toolsRow, new LinearLayout.LayoutParams(-1, dp(44)));
+
+        sortSpinner.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
+            @Override public void onItemSelected(android.widget.AdapterView<?> parent, View view, int position, long id) {
+                if (visibleItems.length() > 0) renderStructuredItems();
+            }
+            @Override public void onNothingSelected(android.widget.AdapterView<?> parent) { }
+        });
+
+        syncStatus = text("未同期", 11, false);
+        syncStatus.setTextColor(muted);
+        LinearLayout.LayoutParams syncParams = new LinearLayout.LayoutParams(-1, -2);
+        syncParams.setMargins(0, dp(8), 0, dp(4));
+        shell.addView(syncStatus, syncParams);
+
         heading = text("", 16, true);
         shell.addView(heading);
         progress = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
@@ -224,6 +272,7 @@ public final class KnowledgeActivity extends Activity {
         }
         mode = MODE_SEARCH;
         lastSearch = query;
+        localStore.addHistory(query);
         heading.setText("検索結果");
         executeAction("knowledge_search", query);
     }
@@ -252,30 +301,59 @@ public final class KnowledgeActivity extends Activity {
             return;
         }
         profileStore.select(profile.id);
+        final String cacheKey = cacheKey(profile.id, inputs, query);
+        KnowledgeLocalStore.Cached cached = localStore.get(cacheKey);
+        if (cached != null) {
+            showAnswer(cached.answer, canResearch, true, cached.savedAt);
+        }
+        if (!isOnline()) {
+            progress.setVisibility(View.GONE);
+            if (cached == null) {
+                results.removeAllViews();
+                addMessage("オフラインです。この条件のキャッシュはまだありません。");
+                syncStatus.setText("オフライン・未取得");
+            }
+            return;
+        }
         progress.setVisibility(View.VISIBLE);
-        results.removeAllViews();
-        addMessage("Difyへ問い合わせています…");
+        if (cached == null) {
+            results.removeAllViews();
+            addMessage("Difyへ問い合わせています…");
+        }
+        syncStatus.setText(cached == null ? "同期中…" : "キャッシュ表示中・同期中…");
         executor.execute(() -> {
             try {
                 String answer = new DifyClient(profile.base, profile.key).chat(query, Collections.emptyList(), inputs);
+                localStore.put(cacheKey, answer);
                 runOnUiThread(() -> {
                     if (isFinishing() || isDestroyed()) return;
                     progress.setVisibility(View.GONE);
-                    showAnswer(answer, canResearch);
+                    showAnswer(answer, canResearch, false, System.currentTimeMillis());
                 });
             } catch (Exception error) {
                 runOnUiThread(() -> {
                     if (isFinishing() || isDestroyed()) return;
                     progress.setVisibility(View.GONE);
-                    results.removeAllViews();
-                    addMessage("問い合わせに失敗しました。接続設定、通信状態、Dify側の実行状況を確認してください。");
+                    if (cached == null) {
+                        results.removeAllViews();
+                        addMessage("問い合わせに失敗しました。接続設定、通信状態、Dify側の実行状況を確認してください。");
+                        syncStatus.setText("同期失敗");
+                    } else {
+                        syncStatus.setText("同期失敗・キャッシュを表示中");
+                    }
                 });
             }
         });
     }
 
     private void showAnswer(String answer, boolean canResearch) {
+        showAnswer(answer, canResearch, false, System.currentTimeMillis());
+    }
+
+    private void showAnswer(String answer, boolean canResearch, boolean cached, long savedAt) {
         results.removeAllViews();
+        syncStatus.setText((cached ? "キャッシュ: " : "同期済み: ")
+                + DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(new Date(savedAt)));
         String value = answer == null ? "" : answer.trim();
         if (value.isEmpty()) {
             addMessage("Difyから表示できる回答が返されませんでした。");
@@ -301,17 +379,11 @@ public final class KnowledgeActivity extends Activity {
             if (payload.optInt("version", 0) != 1) return false;
             String action = payload.optString("action", "");
             String message = payload.optString("message", "").trim();
-            if (!message.isEmpty()) addMessage(message);
             JSONArray items = payload.optJSONArray("items");
-            if (items != null) {
-                for (int index = 0; index < items.length(); index++) {
-                    JSONObject item = items.optJSONObject(index);
-                    if (item == null) continue;
-                    String title = item.optString("title", "(無題)");
-                    String preview = item.optString("preview", "").trim();
-                    addItemActions(title, preview);
-                }
-            }
+            visibleAction = action;
+            visibleMessage = message;
+            visibleItems = items == null ? new JSONArray() : items;
+            renderStructuredItems();
             if ((items == null || items.length() == 0)
                     && ("todo_list".equals(action) || "read_later_list".equals(action))) {
                 addManualManagement();
@@ -320,6 +392,59 @@ public final class KnowledgeActivity extends Activity {
         } catch (Exception ignored) {
             return false;
         }
+    }
+
+    private void renderStructuredItems() {
+        results.removeAllViews();
+        if (!visibleMessage.isEmpty()) addMessage(visibleMessage);
+        ArrayList<JSONObject> items = new ArrayList<>();
+        for (int i = 0; i < visibleItems.length(); i++) {
+            JSONObject item = visibleItems.optJSONObject(i);
+            if (item != null) items.add(item);
+        }
+        int order = sortSpinner == null ? 0 : sortSpinner.getSelectedItemPosition();
+        Comparator<JSONObject> byTitle = Comparator.comparing(
+                item -> item.optString("title", ""), String.CASE_INSENSITIVE_ORDER);
+        if (order == 0) Collections.sort(items, Comparator.comparing(this::itemDate).reversed());
+        else if (order == 1) Collections.sort(items, byTitle);
+        else if (order == 2) Collections.sort(items, byTitle.reversed());
+        for (JSONObject item : items) {
+            addItemActions(item.optString("title", "(無題)"), item.optString("preview", "").trim());
+        }
+    }
+
+    private String itemDate(JSONObject item) {
+        Matcher matcher = ITEM_DATE.matcher(item.optString("preview", ""));
+        String latest = "";
+        while (matcher.find()) latest = matcher.group(1);
+        return latest.replace('/', '-').replace('T', ' ');
+    }
+
+    private void showSearchHistory() {
+        List<String> history = localStore.history();
+        if (history.isEmpty()) {
+            Toast.makeText(this, "検索履歴はまだありません", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        String[] values = history.toArray(new String[0]);
+        new AlertDialog.Builder(this).setTitle("検索履歴").setItems(values, (dialog, which) -> {
+            searchField.setText(values[which]);
+            searchField.setSelection(values[which].length());
+            search();
+        }).setNegativeButton("閉じる", null).show();
+    }
+
+    private String cacheKey(String profileId, JSONObject inputs, String query) {
+        return Integer.toHexString((profileId + "|" + inputs.toString() + "|" + query).hashCode());
+    }
+
+    private boolean isOnline() {
+        ConnectivityManager manager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        if (manager == null) return false;
+        Network network = manager.getActiveNetwork();
+        NetworkCapabilities caps = network == null ? null : manager.getNetworkCapabilities(network);
+        return caps != null && caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                && caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED);
     }
 
     private boolean needsResearch(String answer) {

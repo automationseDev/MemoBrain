@@ -12,7 +12,6 @@ param(
 $ErrorActionPreference = "Stop"
 $GradleVersion = "9.5.1"
 $CompileSdk = 36
-$OutputApkName = "MemoBrain-v1.3.1-develop-debug.apk"
 $GradleBaseUrl = "https://services.gradle.org/distributions"
 $GradleZipName = "gradle-$GradleVersion-bin.zip"
 $GradleZipUrl = "$GradleBaseUrl/$GradleZipName"
@@ -190,6 +189,10 @@ function Ensure-GradleWrapper {
 
 if (-not [string]::IsNullOrWhiteSpace($PSScriptRoot)) {$ProjectRoot=$PSScriptRoot} elseif ($MyInvocation.MyCommand.Path) {$ProjectRoot=Split-Path -Parent $MyInvocation.MyCommand.Path} else {$ProjectRoot=(Get-Location).Path}
 $ProjectRoot=(Resolve-Path -LiteralPath $ProjectRoot).Path
+$buildGradle = Join-Path $ProjectRoot "app\build.gradle.kts"
+$versionMatch = Select-String -LiteralPath $buildGradle -Pattern 'versionName\s*=\s*"([^"]+)"' | Select-Object -First 1
+if (-not $versionMatch) { Fail "app/build.gradle.kts から versionName を取得できませんでした。" }
+$OutputApkName = "MemoBrain-v$($versionMatch.Matches[0].Groups[1].Value)-develop-debug.apk"
 Write-Host "MemoBrain APK Builder v1.0.0" -ForegroundColor Green
 $signingSecretsPath=Join-Path $ProjectRoot "signing-secrets.properties"
 if (Test-Path -LiteralPath $signingSecretsPath) {
