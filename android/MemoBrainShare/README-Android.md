@@ -69,7 +69,7 @@ USBデバッグを許可したAndroid端末へ、ビルド後にそのまま上�
 生成先:
 
 ```text
-MemoBrainShare\output\MemoBrain-v1.3.1-develop-debug.apk
+MemoBrainShare\output\MemoBrain-v1.4.0-develop-debug.apk
 ```
 
 ## 署名済み Release APK
@@ -104,7 +104,7 @@ MemoBrainShare\Build-MemoBrainRelease.cmd
 成功すると:
 
 ```text
-MemoBrainShare\output\MemoBrain-v1.3.1-release.apk
+MemoBrainShare\output\MemoBrain-v1.4.0-release.apk
 MemoBrainShare\output\SHA256SUMS.txt
 ```
 

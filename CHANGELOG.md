@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.4.0-develop - 2026-08-19
+
+- Knowledge画面から構造化actionをDifyへ送信し、一覧・詳細・検索・カテゴリ/タグ絞り込みをLLMなしで実行
+- TODO完了と「あとで読む」の読了をLLMなしで更新
+- 非AI分岐を追加したDify DSL v0.3.8を追加
+
 ## v1.3.0 - 2026-08-17
 
 - Android app version 1.3.0 / versionCode 10（v1.2.0から同一署名で更新可能）
